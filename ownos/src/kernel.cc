@@ -1,5 +1,6 @@
 #include "types.hh"
 #include "gdt.hh"
+#include "interrupts.hh"
 
 void printf(char *str)
 {
@@ -15,7 +16,6 @@ void printf(char *str)
             x = 0;
             y++;
             break;
-
         default:
             video_memory[80 * y + x] = (video_memory[80 * y + x] & 0xFF00) | str[i];
             x++;
@@ -55,6 +55,8 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     printf("Hello World!");
 
     GlobalDescriptorTable gdt;
+    InterruptManager interrupts(0x20, &gdt);
+    interrupts.Activate();
 
     while (1)
         ;
