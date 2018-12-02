@@ -1,4 +1,8 @@
-#include "keyboard.hh"
+#include <drivers/keyboard.hh>
+
+using namespace myos::shared;
+using namespace myos::drivers;
+using namespace myos::COM;
 
 KeyboardEventHandler::KeyboardEventHandler()
 {
@@ -31,10 +35,10 @@ void KeyboardDriver::Activate()
 {
     while (commandport.Read() & 0x1)
         dataport.Read();
-    commandport.Write(0xae); // activate interrupts
-    commandport.Write(0x20); // command 0x20 = read controller command byte
+    commandport.Write(0xae);
+    commandport.Write(0x20);
     uint8_t status = (dataport.Read() | 1) & ~0x10;
-    commandport.Write(0x60); // command 0x60 = set controller command byte
+    commandport.Write(0x60);
     dataport.Write(status);
     dataport.Write(0xf4);
 }

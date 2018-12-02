@@ -1,5 +1,7 @@
+#include <COM/port.hh>
 
-#include "port.hh"
+using namespace myos::shared;
+using namespace myos::COM;
 
 Port::Port(uint16_t portnumber)
 {

@@ -1,4 +1,7 @@
-#include "interrupts.hh"
+#include <COM/interrupts.hh>
+
+using namespace myos::shared;
+using namespace myos::COM;
 
 void printf(char *str);
 void printfHex(uint8_t);

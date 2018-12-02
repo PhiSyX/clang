@@ -1,5 +1,7 @@
+#include <gdt.hh>
 
-#include "gdt.hh"
+using namespace myos;
+using namespace myos::shared;
 
 GlobalDescriptorTable::GlobalDescriptorTable()
     : nullSegmentSelector(0, 0, 0),
@@ -33,10 +35,12 @@ GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint3
 
     if (limit <= 65536)
     {
+        // 16-bit address space
         target[6] = 0x40;
     }
     else
     {
+        // 32-bit address space
         if ((limit & 0xFFF) != 0xFFF)
             limit = (limit >> 12) - 1;
         else
@@ -45,12 +49,12 @@ GlobalDescriptorTable::SegmentDescriptor::SegmentDescriptor(uint32_t base, uint3
         target[6] = 0xC0;
     }
 
-    // Encode la limite
+    // Encode the limit
     target[0] = limit & 0xFF;
     target[1] = (limit >> 8) & 0xFF;
     target[6] |= (limit >> 16) & 0xF;
 
-    // Encode la base
+    // Encode the base
     target[2] = base & 0xFF;
     target[3] = (base >> 8) & 0xFF;
     target[4] = (base >> 16) & 0xFF;

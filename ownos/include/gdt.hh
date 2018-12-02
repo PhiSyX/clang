@@ -1,39 +1,42 @@
-#ifndef __GDT_H
-#define __GDT_H
+#ifndef __MYOS__GDT_H
+#define __MYOS__GDT_H
 
-#include "types.hh"
+#include <shared/types.hh>
 
-class GlobalDescriptorTable
+namespace myos
 {
-public:
-    class SegmentDescriptor
+    class GlobalDescriptorTable
     {
+    public:
+        class SegmentDescriptor
+        {
+        private:
+            myos::shared::uint16_t limit_lo;
+            myos::shared::uint16_t base_lo;
+            myos::shared::uint8_t base_hi;
+            myos::shared::uint8_t type;
+            myos::shared::uint8_t limit_hi;
+            myos::shared::uint8_t base_vhi;
+
+        public:
+            SegmentDescriptor(myos::shared::uint32_t base, myos::shared::uint32_t limit, myos::shared::uint8_t type);
+            myos::shared::uint32_t Base();
+            myos::shared::uint32_t Limit();
+        } __attribute__((packed));
+
     private:
-        uint16_t limit_lo;
-        uint16_t base_lo;
-        uint8_t base_hi;
-        uint8_t type;
-        uint8_t limit_hi;
-        uint8_t base_vhi;
+        SegmentDescriptor nullSegmentSelector;
+        SegmentDescriptor unusedSegmentSelector;
+        SegmentDescriptor codeSegmentSelector;
+        SegmentDescriptor dataSegmentSelector;
 
     public:
-        SegmentDescriptor(uint32_t base, uint32_t limit, uint8_t type);
-        uint32_t Base();
-        uint32_t Limit();
-    } __attribute__((packed));
+        GlobalDescriptorTable();
+        ~GlobalDescriptorTable();
 
-private:
-    SegmentDescriptor nullSegmentSelector;
-    SegmentDescriptor unusedSegmentSelector;
-    SegmentDescriptor codeSegmentSelector;
-    SegmentDescriptor dataSegmentSelector;
-
-public:
-    GlobalDescriptorTable();
-    ~GlobalDescriptorTable();
-
-    uint16_t CodeSegmentSelector();
-    uint16_t DataSegmentSelector();
-};
+        myos::shared::uint16_t CodeSegmentSelector();
+        myos::shared::uint16_t DataSegmentSelector();
+    };
+}
 
 #endif

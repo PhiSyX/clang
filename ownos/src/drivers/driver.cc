@@ -1,4 +1,6 @@
-#include "driver.hh"
+#include <drivers/driver.hh>
+
+using namespace myos::drivers;
 
 Driver::Driver()
 {

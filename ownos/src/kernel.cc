@@ -1,10 +1,15 @@
 
-#include "types.hh"
-#include "gdt.hh"
-#include "interrupts.hh"
-#include "driver.hh"
-#include "keyboard.hh"
-#include "mouse.hh"
+#include <shared/types.hh>
+#include <gdt.hh>
+#include <COM/interrupts.hh>
+#include <drivers/driver.hh>
+#include <drivers/keyboard.hh>
+#include <drivers/mouse.hh>
+
+using namespace myos;
+using namespace myos::shared;
+using namespace myos::drivers;
+using namespace myos::COM;
 
 void printf(char *str)
 {
@@ -69,10 +74,6 @@ class MouseToConsole : public MouseEventHandler
 
 public:
     MouseToConsole()
-    {
-    }
-
-    virtual void OnActivate()
     {
         uint16_t *vmem = (uint16_t *)0xb8000;
         x = 40;

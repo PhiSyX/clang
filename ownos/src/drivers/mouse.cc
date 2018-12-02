@@ -1,4 +1,8 @@
-#include "mouse.hh"
+#include <drivers/mouse.hh>
+
+using namespace myos::shared;
+using namespace myos::drivers;
+using namespace myos::COM;
 
 void printf(char *);
 
@@ -43,9 +47,9 @@ void MouseDriver::Activate()
         handler->OnActivate();
 
     commandport.Write(0xA8);
-    commandport.Write(0x20); // command 0x60 = read controller command byte
+    commandport.Write(0x20);
     uint8_t status = dataport.Read() | 2;
-    commandport.Write(0x60); // command 0x60 = set controller command byte
+    commandport.Write(0x60);
     dataport.Write(status);
 
     commandport.Write(0xD4);
