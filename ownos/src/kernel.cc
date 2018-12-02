@@ -2,10 +2,11 @@
 #include "gdt.hh"
 #include "interrupts.hh"
 #include "keyboard.hh"
+#include "mouse.hh"
 
 void printf(char *str)
 {
-    static uint16_t *video_memory = (uint16_t *)0xb8000;
+    static uint16_t *vmem = (uint16_t *)0xb8000;
 
     static uint8_t x = 0, y = 0;
 
@@ -18,7 +19,7 @@ void printf(char *str)
             y++;
             break;
         default:
-            video_memory[80 * y + x] = (video_memory[80 * y + x] & 0xFF00) | str[i];
+            vmem[80 * y + x] = (vmem[80 * y + x] & 0xFF00) | str[i];
             x++;
             break;
         }
@@ -33,7 +34,7 @@ void printf(char *str)
         {
             for (y = 0; y < 25; y++)
                 for (x = 0; x < 80; x++)
-                    video_memory[80 * y + x] = (video_memory[80 * y + x] & 0xFF00) | ' ';
+                    vmem[80 * y + x] = (vmem[80 * y + x] & 0xFF00) | ' ';
             x = 0;
             y = 0;
         }
@@ -58,6 +59,7 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     GlobalDescriptorTable gdt;
     InterruptManager interrupts(0x20, &gdt);
     KeyboardDriver keyboard(&interrupts);
+    MouseDriver mouse(&interrupts);
     interrupts.Activate();
 
     while (1)
