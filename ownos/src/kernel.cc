@@ -2,6 +2,7 @@
 #include <shared/types.hh>
 #include <gdt.hh>
 #include <COM/interrupts.hh>
+#include <COM/pci.hh>
 #include <drivers/driver.hh>
 #include <drivers/keyboard.hh>
 #include <drivers/mouse.hh>
@@ -130,6 +131,9 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     MouseToConsole mousehandler;
     MouseDriver mouse(&interrupts, &mousehandler);
     drvManager.AddDriver(&mouse);
+
+    PeripheralComponentInterconnectController PCIController;
+    PCIController.SelectDrivers(&drvManager);
 
     printf("Initializing Hardware, Stage 2\n");
     drvManager.ActivateAll();

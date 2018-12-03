@@ -1,5 +1,5 @@
-#ifndef __MYOS__COMMON__TYPES_H
-#define __MYOS__COMMON__TYPES_H
+#ifndef __MYOS__SHARED__TYPES_H
+#define __MYOS__SHARED__TYPES_H
 
 namespace myos
 {
@@ -13,6 +13,8 @@ namespace myos
         typedef unsigned int uint32_t;
         typedef long long int int64_t;
         typedef unsigned long long int uint64_t;
+
+        typedef const char *string;
     }
 }
 
