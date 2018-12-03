@@ -11,6 +11,21 @@ namespace myos
     namespace COM
     {
 
+        enum BaseAddressRegisterType
+        {
+            MemoryMapping = 0,
+            InputOutput = 1
+        };
+
+        class BaseAddressRegister
+        {
+        public:
+            bool prefetchable;
+            myos::shared::uint8_t *address;
+            myos::shared::uint32_t size;
+            BaseAddressRegisterType type;
+        };
+
         class PeripheralComponentInterconnectDeviceDescriptor
         {
         public:
@@ -47,8 +62,10 @@ namespace myos
             void Write(myos::shared::uint16_t bus, myos::shared::uint16_t device, myos::shared::uint16_t function, myos::shared::uint32_t registeroffset, myos::shared::uint32_t value);
             bool DeviceHasFunctions(myos::shared::uint16_t bus, myos::shared::uint16_t device);
 
-            void SelectDrivers(myos::drivers::DriverManager *driverManager);
+            void SelectDrivers(myos::drivers::DriverManager *driverManager, myos::COM::InterruptManager *interrupts);
+            myos::drivers::Driver *GetDriver(PeripheralComponentInterconnectDeviceDescriptor dev, myos::COM::InterruptManager *interrupts);
             PeripheralComponentInterconnectDeviceDescriptor GetDeviceDescriptor(myos::shared::uint16_t bus, myos::shared::uint16_t device, myos::shared::uint16_t function);
+            BaseAddressRegister GetBaseAddressRegister(myos::shared::uint16_t bus, myos::shared::uint16_t device, myos::shared::uint16_t function, myos::shared::uint16_t bar);
         };
 
     }
