@@ -37,6 +37,8 @@ namespace myos
             virtual bool SetMode(shared::uint32_t width, shared::uint32_t height, shared::uint32_t colordepth);
             virtual void PutPixel(shared::uint32_t x, shared::uint32_t y, shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
             virtual void PutPixel(shared::uint32_t x, shared::uint32_t y, shared::uint8_t colorIndex);
+
+            virtual void FillRectangle(shared::uint32_t x, shared::uint32_t y, shared::uint32_t w, shared::uint32_t h, shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
         };
     }
 }
