@@ -7,7 +7,7 @@ namespace myos
 {
     namespace shared
     {
-        typedef GraphicsContext VideoGraphicsArray;
+        typedef myos::drivers::VideoGraphicsArray GraphicsContext;
     }
 }
 
