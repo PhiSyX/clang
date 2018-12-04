@@ -1,5 +1,6 @@
 #include <COM/interrupts.hh>
 
+using namespace myos;
 using namespace myos::shared;
 using namespace myos::COM;
 
@@ -30,6 +31,8 @@ InterruptManager *InterruptManager::ActiveInterruptManager = 0;
 void InterruptManager::SetInterruptDescriptorTableEntry(uint8_t interrupt,
                                                         uint16_t CodeSegment, void (*handler)(), uint8_t DescriptorPrivilegeLevel, uint8_t DescriptorType)
 {
+    // address of pointer to code segment (relative to global descriptor table)
+    // and address of the handler (relative to segment)
     interruptDescriptorTable[interrupt].handlerAddressLowBits = ((uint32_t)handler) & 0xFFFF;
     interruptDescriptorTable[interrupt].handlerAddressHighBits = (((uint32_t)handler) >> 16) & 0xFFFF;
     interruptDescriptorTable[interrupt].gdt_codeSegmentSelector = CodeSegment;
@@ -39,12 +42,13 @@ void InterruptManager::SetInterruptDescriptorTableEntry(uint8_t interrupt,
     interruptDescriptorTable[interrupt].reserved = 0;
 }
 
-InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable *globalDescriptorTable)
+InterruptManager::InterruptManager(uint16_t hardwareInterruptOffset, GlobalDescriptorTable *globalDescriptorTable, TaskManager *taskManager)
     : programmableInterruptControllerMasterCommandPort(0x20),
       programmableInterruptControllerMasterDataPort(0x21),
       programmableInterruptControllerSlaveCommandPort(0xA0),
       programmableInterruptControllerSlaveDataPort(0xA1)
 {
+    this->taskManager = taskManager;
     this->hardwareInterruptOffset = hardwareInterruptOffset;
     uint32_t CodeSegment = globalDescriptorTable->CodeSegmentSelector();
 
@@ -164,6 +168,12 @@ uint32_t InterruptManager::DoHandleInterrupt(uint8_t interrupt, uint32_t esp)
         printfHex(interrupt);
     }
 
+    if (interrupt == hardwareInterruptOffset)
+    {
+        esp = (uint32_t)taskManager->Schedule((CPUState *)esp);
+    }
+
+    // hardware interrupts must be acknowledged
     if (hardwareInterruptOffset <= interrupt && interrupt < hardwareInterruptOffset + 16)
     {
         programmableInterruptControllerMasterCommandPort.Write(0x20);

@@ -12,9 +12,10 @@ objects = obj/loader.o \
           obj/drivers/keyboard.o \
           obj/drivers/mouse.o \
           obj/drivers/vga.o \
-          obj/gui/widget.o \
-          obj/gui/window.o \
-          obj/gui/desktop.o \
+          obj/GUI/widget.o \
+          obj/GUI/window.o \
+          obj/GUI/desktop.o \
+          obj/multitasking.o \
           obj/kernel.o
 
 obj/%.o: src/%.cc
