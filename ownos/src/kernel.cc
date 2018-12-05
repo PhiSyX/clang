@@ -3,6 +3,7 @@
 #include <memorymanagement.hh>
 #include <COM/interrupts.hh>
 #include <COM/pci.hh>
+#include <drivers/amd_am79c973.hh>
 #include <drivers/driver.hh>
 #include <drivers/keyboard.hh>
 #include <drivers/mouse.hh>
@@ -216,6 +217,9 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
     desktop.AddChild(&win2);
 #endif
+
+    amd_am79c973 *eth0 = (amd_am79c973 *)(drvManager.drivers[2]);
+    eth0->Send((uint8_t *)"Hello Network", 13);
 
     interrupts.Activate();
 

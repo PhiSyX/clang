@@ -64,6 +64,9 @@ namespace myos
             void Activate();
             int Reset();
             shared::uint32_t HandleInterrupt(shared::uint32_t esp);
+
+            void Send(shared::uint8_t *buffer, int count);
+            void Receive();
         };
 
     }
