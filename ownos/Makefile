@@ -15,6 +15,7 @@ objects = obj/loader.o \
           obj/GUI/widget.o \
           obj/GUI/window.o \
           obj/GUI/desktop.o \
+          obj/memorymanagement.o \
           obj/multitasking.o \
           obj/kernel.o
 

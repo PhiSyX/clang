@@ -5,6 +5,7 @@
 #include <drivers/driver.hh>
 #include <shared/types.hh>
 #include <COM/interrupts.hh>
+#include <memorymanagement.hh>
 
 namespace myos
 {
