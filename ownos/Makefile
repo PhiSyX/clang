@@ -10,6 +10,7 @@ objects = obj/loader.o \
           obj/COM/interrupts.o \
           obj/COM/pci.o \
           obj/drivers/amd_am79c973.o \
+          obj/drivers/ata.o \
           obj/drivers/keyboard.o \
           obj/drivers/mouse.o \
           obj/drivers/vga.o \

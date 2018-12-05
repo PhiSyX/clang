@@ -3,6 +3,7 @@
 #include <memorymanagement.hh>
 #include <COM/interrupts.hh>
 #include <COM/pci.hh>
+#include <drivers/ata.hh>
 #include <drivers/amd_am79c973.hh>
 #include <drivers/driver.hh>
 #include <drivers/keyboard.hh>
@@ -217,6 +218,28 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
     desktop.AddChild(&win2);
 #endif
+
+    printf("\nS-ATA primary master: ");
+    AdvancedTechnologyAttachment ata0m(true, 0x1F0);
+    ata0m.Identify();
+
+    printf("\nS-ATA primary slave: ");
+    AdvancedTechnologyAttachment ata0s(false, 0x1F0);
+    ata0s.Identify();
+    ata0s.Write28(0, (uint8_t *)"hello, world!", 13);
+    ata0s.Flush();
+    ata0s.Read28(0);
+
+    printf("\nS-ATA secondary master: ");
+    AdvancedTechnologyAttachment ata1m(true, 0x170);
+    ata1m.Identify();
+
+    printf("\nS-ATA secondary slave: ");
+    AdvancedTechnologyAttachment ata1s(false, 0x170);
+    ata1s.Identify();
+
+    // third: 0x1E8
+    // fourth: 0x168
 
     amd_am79c973 *eth0 = (amd_am79c973 *)(drvManager.drivers[2]);
     eth0->Send((uint8_t *)"Hello Network", 13);
