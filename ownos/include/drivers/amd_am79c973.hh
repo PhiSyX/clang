@@ -23,7 +23,7 @@ namespace myos
             RawDataHandler(amd_am79c973 *backend);
             ~RawDataHandler();
 
-            bool OnRawDataReceived(shared::uint8_t *buffer, shared::uint32_t size);
+            virtual bool OnRawDataReceived(shared::uint8_t *buffer, shared::uint32_t size);
             void Send(shared::uint8_t *buffer, shared::uint32_t size);
         };
 

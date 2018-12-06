@@ -30,7 +30,7 @@ namespace myos
             EtherFrameHandler(EtherFrameProvider *backend, shared::uint16_t etherType);
             ~EtherFrameHandler();
 
-            bool OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size);
+            virtual bool OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size);
             void Send(shared::uint64_t dstMAC_BE, shared::uint8_t *etherframePayload, shared::uint32_t size);
         };
 
