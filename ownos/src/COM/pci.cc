@@ -140,7 +140,8 @@ Driver *PeripheralComponentInterconnectController::GetDriver(PeripheralComponent
             driver = (amd_am79c973 *)MemoryManager::activeMemoryManager->malloc(sizeof(amd_am79c973));
             if (driver != 0)
                 new (driver) amd_am79c973(&dev, interrupts);
-            printf("AMD am79c973 ");
+            else
+                printf("instantiation failed");
             return driver;
         }
         break;

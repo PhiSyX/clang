@@ -5,6 +5,30 @@ using namespace myos::shared;
 using namespace myos::drivers;
 using namespace myos::COM;
 
+RawDataHandler::RawDataHandler(amd_am79c973 *backend)
+{
+    this->backend = backend;
+    backend->SetHandler(this);
+}
+
+RawDataHandler::~RawDataHandler()
+{
+    backend->SetHandler(0);
+}
+
+bool RawDataHandler::OnRawDataReceived(uint8_t *buffer, uint32_t size)
+{
+    return false;
+}
+
+void RawDataHandler::Send(uint8_t *buffer, uint32_t size)
+{
+    backend->Send(buffer, size);
+}
+
+void printf(char *);
+void printfHex(uint8_t);
+
 amd_am79c973::amd_am79c973(PeripheralComponentInterconnectDeviceDescriptor *dev, InterruptManager *interrupts)
     : Driver(),
       InterruptHandler(interrupts, dev->interrupt + interrupts->HardwareInterruptOffset()),
@@ -16,6 +40,7 @@ amd_am79c973::amd_am79c973(PeripheralComponentInterconnectDeviceDescriptor *dev,
       resetPort(dev->portBase + 0x14),
       busControlRegisterDataPort(dev->portBase + 0x16)
 {
+    this->handler = 0;
     currentSendBuffer = 0;
     currentRecvBuffer = 0;
 
@@ -95,12 +120,9 @@ int amd_am79c973::Reset()
     return 10;
 }
 
-void printf(char *);
-void printfHex(uint8_t);
-
 uint32_t amd_am79c973::HandleInterrupt(shared::uint32_t esp)
 {
-    printf("INTERRUPT FROM AMD am79c973\n");
+    printf("INTERRUPT FROM COM am79c973\n");
 
     registerAddressPort.Write(0);
     uint32_t temp = registerDataPort.Read();
@@ -164,14 +186,30 @@ void amd_am79c973::Receive()
 
             uint8_t *buffer = (uint8_t *)(recvBufferDescr[currentRecvBuffer].address);
 
-            for (int i = 0; i < size; i++)
+            if (handler != 0)
+                if (handler->OnRawDataReceived(buffer, size))
+                    Send(buffer, size);
+
+            /*
+            for(int i = 0; i < size; i++)
             {
                 printfHex(buffer[i]);
                 printf(" ");
             }
+            */
         }
 
         recvBufferDescr[currentRecvBuffer].flags2 = 0;
         recvBufferDescr[currentRecvBuffer].flags = 0x8000F7FF;
     }
+}
+
+void amd_am79c973::SetHandler(RawDataHandler *handler)
+{
+    this->handler = handler;
+}
+
+uint64_t amd_am79c973::GetMACAddress()
+{
+    return initBlock.physicalAddress;
 }
