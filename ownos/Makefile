@@ -19,6 +19,7 @@ objects = obj/loader.o \
           obj/GUI/desktop.o \
           obj/memorymanagement.o \
           obj/multitasking.o \
+          obj/syscalls.o \
           obj/kernel.o
 
 obj/%.o: src/%.cc

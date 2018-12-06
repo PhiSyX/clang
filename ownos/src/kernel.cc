@@ -3,15 +3,16 @@
 #include <memorymanagement.hh>
 #include <COM/interrupts.hh>
 #include <COM/pci.hh>
-#include <drivers/ata.hh>
 #include <drivers/amd_am79c973.hh>
 #include <drivers/driver.hh>
 #include <drivers/keyboard.hh>
 #include <drivers/mouse.hh>
 #include <drivers/vga.hh>
+#include <drivers/ata.hh>
 #include <GUI/desktop.hh>
 #include <GUI/window.hh>
 #include <multitasking.hh>
+#include <syscalls.hh>
 
 // #define GRAPHICSMODE
 
@@ -123,15 +124,21 @@ public:
     }
 };
 
+void sysprintf(char *str)
+{
+    asm("int $0x80" : : "a"(4), "b"(str));
+}
+
 void taskA()
 {
     while (true)
-        printf("A");
+        sysprintf("A");
 }
+
 void taskB()
 {
     while (true)
-        printf("B");
+        sysprintf("B");
 }
 
 typedef void (*constructor)();
@@ -168,14 +175,13 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     printf("\n");
 
     TaskManager taskManager;
-    /*
     Task task1(&gdt, taskA);
     Task task2(&gdt, taskB);
     taskManager.AddTask(&task1);
     taskManager.AddTask(&task2);
-    */
 
     InterruptManager interrupts(0x20, &gdt, &taskManager);
+    SyscallHandler syscalls(&interrupts, 0x80);
 
     printf("Initializing Hardware, Stage 1\n");
 
@@ -204,7 +210,9 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     PeripheralComponentInterconnectController PCIController;
     PCIController.SelectDrivers(&drvManager, &interrupts);
 
+#ifdef GRAPHICSMODE
     VideoGraphicsArray vga;
+#endif
 
     printf("Initializing Hardware, Stage 2\n");
     drvManager.ActivateAll();
@@ -219,6 +227,7 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     desktop.AddChild(&win2);
 #endif
 
+    /*
     printf("\nS-ATA primary master: ");
     AdvancedTechnologyAttachment ata0m(true, 0x1F0);
     ata0m.Identify();
@@ -228,7 +237,7 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     ata0s.Identify();
     ata0s.Write28(0, (uint8_t *)"hello, world!", 13);
     ata0s.Flush();
-    ata0s.Read28(0);
+    ata0s.Read28(0, 13);
 
     printf("\nS-ATA secondary master: ");
     AdvancedTechnologyAttachment ata1m(true, 0x170);
@@ -240,6 +249,7 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 
     // third: 0x1E8
     // fourth: 0x168
+    */
 
     amd_am79c973 *eth0 = (amd_am79c973 *)(drvManager.drivers[2]);
     eth0->Send((uint8_t *)"Hello Network", 13);
