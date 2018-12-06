@@ -13,6 +13,7 @@
 #include <GUI/window.hh>
 #include <multitasking.hh>
 #include <syscalls.hh>
+#include <network/arp.hh>
 #include <network/etherframe.hh>
 
 // #define GRAPHICSMODE
@@ -255,12 +256,29 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     // fourth: 0x168
     */
 
+    // IP 10.0.2.15
+    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 = 15;
+    uint32_t ip_be = ((uint32_t)ip4 << 24) | ((uint32_t)ip3 << 16) | ((uint32_t)ip2 << 8) | (uint32_t)ip1;
+
+    // IP 10.0.2.2
+    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
+    uint32_t gip_be = ((uint32_t)gip4 << 24) | ((uint32_t)gip3 << 16) | ((uint32_t)gip2 << 8) | (uint32_t)gip1;
+
     amd_am79c973 *eth0 = (amd_am79c973 *)(drvManager.drivers[2]);
+
+    eth0->SetIPAddress(ip_be);
+
     EtherFrameProvider etherframe(eth0);
-    etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t *)"FOO", 3);
+
+    AddressResolutionProtocol arp(&etherframe);
+
+    // etherframe.Send(0xFFFFFFFFFFFF, 0x0608, (uint8_t *)"FOO", 3);
     // eth0->Send((uint8_t*)"Hello Network", 13);
 
     interrupts.Activate();
+
+    printf("\n\n\n\n\n\n\n\n");
+    arp.Resolve(gip_be);
 
     while (1)
     {

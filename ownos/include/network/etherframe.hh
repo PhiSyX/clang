@@ -11,8 +11,8 @@ namespace myos
     {
         struct EtherFrameHeader
         {
-            shared::uint64_t dstMAC_BE;
-            shared::uint64_t srcMAC_BE;
+            shared::uint64_t dstMAC_BE : 48;
+            shared::uint64_t srcMAC_BE : 48;
             shared::uint16_t etherType_BE;
         } __attribute__((packed));
 
@@ -47,6 +47,9 @@ namespace myos
 
             bool OnRawDataReceived(shared::uint8_t *buffer, shared::uint32_t size);
             void Send(shared::uint64_t dstMAC_BE, shared::uint16_t etherType_BE, shared::uint8_t *buffer, shared::uint32_t size);
+
+            shared::uint64_t GetMACAddress();
+            shared::uint32_t GetIPAddress();
         };
     }
 }

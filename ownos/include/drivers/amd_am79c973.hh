@@ -1,3 +1,4 @@
+
 #ifndef __MYOS__DRIVERS__AMD_AM79C973_H
 #define __MYOS__DRIVERS__AMD_AM79C973_H
 
@@ -86,6 +87,8 @@ namespace myos
 
             void SetHandler(RawDataHandler *handler);
             shared::uint64_t GetMACAddress();
+            void SetIPAddress(shared::uint32_t);
+            shared::uint32_t GetIPAddress();
         };
     }
 }
