@@ -18,6 +18,7 @@
 #include <network/arp.hh>
 #include <network/ipv4.hh>
 #include <network/icmp.hh>
+#include <network/tcp.hh>
 #include <network/udp.hh>
 
 // #define GRAPHICSMODE
@@ -142,6 +143,22 @@ public:
             foo[0] = data[i];
             printf(foo);
         }
+    }
+};
+
+class PrintfTCPHandler : public TransmissionControlProtocolHandler
+{
+public:
+    bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, uint8_t *data, uint16_t size)
+    {
+        char *foo = " ";
+        for (int i = 0; i < size; i++)
+        {
+            foo[0] = data[i];
+            printf(foo);
+        }
+
+        return true;
     }
 };
 
@@ -293,21 +310,28 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
     InternetProtocolProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
     InternetControlMessageProtocol icmp(&ipv4);
     UserDatagramProtocolProvider udp(&ipv4);
+    TransmissionControlProtocolProvider tcp(&ipv4);
 
     interrupts.Activate();
 
     printf("\n\n\n\n\n\n\n\n\n\n");
 
     arp.BroadcastMACAddress(gip_be);
-    icmp.RequestEchoReply(gip_be);
 
-    PrintfUDPHandler udphandler;
+    tcp.Connect(gip_be, 1234);
+    PrintfTCPHandler tcphandler;
+    TransmissionControlProtocolSocket *tcpsocket = tcp.Connect(gip_be, 1234);
+    tcp.Bind(tcpsocket, &tcphandler);
+    tcpsocket->Send((uint8_t *)"Hello TCP!", 10);
+
+    // icmp.RequestEchoReply(gip_be);
+
+    // PrintfUDPHandler udphandler;
     // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
     // udp.Bind(udpsocket, &udphandler);
     // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
-
-    UserDatagramProtocolSocket *udpsocket = udp.Listen(1234);
-    udp.Bind(udpsocket, &udphandler);
+    // UserDatagramProtocolSocket *udpsocket = udp.Listen(1234);
+    // udp.Bind(udpsocket, &udphandler);
 
     while (1)
     {

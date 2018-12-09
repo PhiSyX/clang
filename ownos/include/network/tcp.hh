@@ -3,6 +3,7 @@
 
 #include <shared/types.hh>
 #include <network/ipv4.hh>
+#include <memorymanagement.hh>
 
 namespace myos
 {
@@ -22,8 +23,8 @@ namespace myos
             CLOSING,
             TIME_WAIT,
 
-            CLOSE_WAIT,
-            LAST_ACK,
+            CLOSE_WAIT
+            // LAST_ACK
         };
 
         enum TransmissionControlProtocolFlag
@@ -46,13 +47,23 @@ namespace myos
             shared::uint32_t sequenceNumber;
             shared::uint32_t acknowledgementNumber;
 
+            shared::uint8_t reserved : 4;
             shared::uint8_t headerSize32 : 4;
-            shared::uint8_t reserved : 3;
-            shared::uint16_t flags : 9;
+            shared::uint8_t flags;
 
             shared::uint16_t windowSize;
             shared::uint16_t checksum;
             shared::uint16_t urgentPtr;
+
+            shared::uint32_t options;
+        } __attribute__((packed));
+
+        struct TransmissionControlProtocolPseudoHeader
+        {
+            shared::uint32_t srcIP;
+            shared::uint32_t dstIP;
+            shared::uint16_t protocol;
+            shared::uint16_t totalLength;
         } __attribute__((packed));
 
         class TransmissionControlProtocolSocket;
@@ -63,7 +74,7 @@ namespace myos
         public:
             TransmissionControlProtocolHandler();
             ~TransmissionControlProtocolHandler();
-            virtual void HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
+            virtual bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
         };
 
         class TransmissionControlProtocolSocket
@@ -76,6 +87,8 @@ namespace myos
             shared::uint16_t localPort;
             shared::uint32_t localIP;
             shared::uint32_t sequenceNumber;
+            shared::uint32_t acknowledgementNumber;
+
             TransmissionControlProtocolProvider *backend;
             TransmissionControlProtocolHandler *handler;
 
@@ -84,7 +97,7 @@ namespace myos
         public:
             TransmissionControlProtocolSocket(TransmissionControlProtocolProvider *backend);
             ~TransmissionControlProtocolSocket();
-            virtual void HandleTransmissionControlProtocolMessage(shared::uint8_t *data, shared::uint16_t size);
+            virtual bool HandleTransmissionControlProtocolMessage(shared::uint8_t *data, shared::uint16_t size);
             virtual void Send(shared::uint8_t *data, shared::uint16_t size);
             virtual void Disconnect();
         };
@@ -105,12 +118,12 @@ namespace myos
 
             virtual TransmissionControlProtocolSocket *Connect(shared::uint32_t ip, shared::uint16_t port);
             virtual void Disconnect(TransmissionControlProtocolSocket *socket);
-            virtual void Send(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
+            virtual void Send(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size,
+                              shared::uint16_t flags = 0);
 
             virtual TransmissionControlProtocolSocket *Listen(shared::uint16_t port);
             virtual void Bind(TransmissionControlProtocolSocket *socket, TransmissionControlProtocolHandler *handler);
         };
-
     }
 }
 

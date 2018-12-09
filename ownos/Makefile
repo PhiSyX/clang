@@ -21,6 +21,7 @@ objects = obj/loader.o \
           obj/network/etherframe.o \
           obj/network/icmp.o \
           obj/network/ipv4.o \
+          obj/network/tcp.o \
           obj/network/udp.o \
           obj/memorymanagement.o \
           obj/multitasking.o \
