@@ -1,4 +1,3 @@
-
 #include <network/etherframe.hh>
 
 using namespace myos;

@@ -71,6 +71,7 @@ bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t *etherframePayload, 
         ipmessage->srcIP = temp;
 
         ipmessage->timeToLive = 0x40;
+        ipmessage->checksum = 0;
         ipmessage->checksum = Checksum((uint16_t *)ipmessage, 4 * ipmessage->headerLength);
     }
 
@@ -125,5 +126,5 @@ uint16_t InternetProtocolProvider::Checksum(uint16_t *data, uint32_t lengthInByt
     while (temp & 0xFFFF0000)
         temp = (temp & 0xFFFF) + (temp >> 16);
 
-    return ((temp & 0xFF00) >> 8) | ((temp & 0x00FF) << 8);
+    return ((~temp & 0xFF00) >> 8) | ((~temp & 0x00FF) << 8);
 }

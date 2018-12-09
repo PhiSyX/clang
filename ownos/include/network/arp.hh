@@ -9,7 +9,6 @@ namespace myos
 {
     namespace network
     {
-
         struct AddressResolutionProtocolMessage
         {
             shared::uint16_t hardwareType;
@@ -41,6 +40,7 @@ namespace myos
             void RequestMACAddress(shared::uint32_t IP_BE);
             shared::uint64_t GetMACFromCache(shared::uint32_t IP_BE);
             shared::uint64_t Resolve(shared::uint32_t IP_BE);
+            void BroadcastMACAddress(shared::uint32_t IP_BE);
         };
     }
 }
