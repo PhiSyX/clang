@@ -45,7 +45,7 @@ namespace myos
             void Send(shared::uint32_t dstIP_BE, shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
         };
 
-        class InternetProtocolProvider : EtherFrameHandler
+        class InternetProtocolProvider : public EtherFrameHandler
         {
             friend class InternetProtocolHandler;
 

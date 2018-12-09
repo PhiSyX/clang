@@ -32,6 +32,7 @@ namespace myos
 
             virtual bool OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size);
             void Send(shared::uint64_t dstMAC_BE, shared::uint8_t *etherframePayload, shared::uint32_t size);
+            shared::uint32_t GetIPAddress();
         };
 
         class EtherFrameProvider : public myos::drivers::RawDataHandler

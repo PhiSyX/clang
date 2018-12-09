@@ -19,7 +19,9 @@ objects = obj/loader.o \
           obj/GUI/desktop.o \
           obj/network/arp.o \
           obj/network/etherframe.o \
+          obj/network/icmp.o \
           obj/network/ipv4.o \
+          obj/network/udp.o \
           obj/memorymanagement.o \
           obj/multitasking.o \
           obj/syscalls.o \
