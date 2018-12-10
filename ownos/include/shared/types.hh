@@ -16,6 +16,6 @@ typedef unsigned long long int u64;
 typedef i32 isize;
 typedef u32 usize;
 
-typedef const char *str;
+typedef const char* str;
 
 #endif

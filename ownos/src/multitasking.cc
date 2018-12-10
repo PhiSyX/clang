@@ -1,62 +1,63 @@
 #include "multitasking.hh"
 
-Task::Task(const GlobalDescriptorTable *gdt, const void entrypoint())
+Task::Task(const GlobalDescriptorTable* gdt, const void entrypoint())
 {
-    cpustate = (CPUState *)(stack + 4096 - sizeof(CPUState));
+	cpustate = (CPUState*)(stack + 4096 - sizeof(CPUState));
 
-    cpustate->eax = 0;
-    cpustate->ebx = 0;
-    cpustate->ecx = 0;
-    cpustate->edx = 0;
+	cpustate->eax = 0;
+	cpustate->ebx = 0;
+	cpustate->ecx = 0;
+	cpustate->edx = 0;
 
-    cpustate->esi = 0;
-    cpustate->edi = 0;
-    cpustate->ebp = 0;
+	cpustate->esi = 0;
+	cpustate->edi = 0;
+	cpustate->ebp = 0;
 
-    cpustate->eip = (u32)entrypoint;
-    cpustate->cs = gdt->get_code_segment_selector();
-    cpustate->eflags = 0x202;
+	cpustate->eip = (u32)entrypoint;
+	cpustate->cs = gdt->get_code_segment_selector();
+	cpustate->eflags = 0x202;
 }
 
 Task::~Task() {}
 
 TaskManager::TaskManager()
 {
-    total_task = 0;
-    current_task = -1;
+	total_task = 0;
+	current_task = -1;
 }
 
 TaskManager::~TaskManager() {}
 
-bool TaskManager::add(Task *task)
+bool
+TaskManager::add(Task* task)
 {
-    if (total_task >= 256)
-    {
-        return false;
-    }
+	if (total_task >= 256)
+	{
+		return false;
+	}
 
-    tasks[total_task++] = task;
+	tasks[total_task++] = task;
 
-    return true;
+	return true;
 }
 
-const CPUState *
-TaskManager::schedule(CPUState *cpustate) const
+const CPUState*
+TaskManager::schedule(CPUState* cpustate) const
 {
-    if (total_task <= 0)
-    {
-        return cpustate;
-    }
+	if (total_task <= 0)
+	{
+		return cpustate;
+	}
 
-    if (current_task >= 0)
-    {
-        tasks[current_task]->cpustate = cpustate;
-    }
+	if (current_task >= 0)
+	{
+		tasks[current_task]->cpustate = cpustate;
+	}
 
-    if (++current_task >= total_task)
-    {
-        current_task %= total_task;
-    }
+	if (++current_task >= total_task)
+	{
+		current_task %= total_task;
+	}
 
-    return tasks[current_task]->cpustate;
+	return tasks[current_task]->cpustate;
 }

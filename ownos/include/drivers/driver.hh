@@ -5,29 +5,29 @@
 
 class Driver
 {
-public:
-  Driver();
-  ~Driver();
+  public:
+	Driver();
+	~Driver();
 
-public:
-  virtual void activate() const;
-  virtual const i32 reset() const;
-  virtual void deactivate() const;
+  public:
+	virtual void activate() const;
+	virtual const i32 reset() const;
+	virtual void deactivate() const;
 };
 
 class DriverManager
 {
-public:
-  mutable const Driver *drivers[265];
-  mutable usize total_drivers;
+  public:
+	mutable const Driver* drivers[265];
+	mutable usize total_drivers;
 
-public:
-  DriverManager();
+  public:
+	DriverManager();
 
-public:
-  const void add(const Driver *) const;
+  public:
+	const void add(const Driver*) const;
 
-  const void enable_all() const;
+	const void enable_all() const;
 };
 
 #endif

@@ -5,10 +5,10 @@
 
 namespace myos
 {
-    namespace shared
-    {
-        typedef myos::drivers::VideoGraphicsArray GraphicsContext;
-    }
+namespace shared
+{
+typedef myos::drivers::VideoGraphicsArray GraphicsContext;
+}
 }
 
 #endif

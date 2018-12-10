@@ -5,39 +5,41 @@
 
 struct MemoryChunk
 {
-    MemoryChunk *next;
-    MemoryChunk *prev;
-    bool allocated;
-    usize size;
+	MemoryChunk* next;
+	MemoryChunk* prev;
+	bool allocated;
+	usize size;
 };
 
 class MemoryManager
 {
-protected:
-    MemoryChunk *first;
+  protected:
+	MemoryChunk* first;
 
-public:
-    static MemoryManager *active_memory_manager;
+  public:
+	static MemoryManager* active_memory_manager;
 
-    MemoryManager(const usize first, const usize size);
-    ~MemoryManager();
+	MemoryManager(const usize first, const usize size);
+	~MemoryManager();
 
-public:
-    void *malloc(const usize size) const;
-    void free(void *ptr) const;
+  public:
+	void* malloc(const usize size) const;
+	void free(void* ptr) const;
 };
 
-void *
+void*
 operator new(unsigned size);
-void *
+void*
 operator new[](unsigned size);
 
-void *
-operator new(unsigned size, void *ptr);
-void *
-operator new[](unsigned size, void *ptr);
+void*
+operator new(unsigned size, void* ptr);
+void*
+operator new[](unsigned size, void* ptr);
 
-void operator delete(void *ptr);
-void operator delete[](void *ptr);
+void
+operator delete(void* ptr);
+void
+operator delete[](void* ptr);
 
 #endif

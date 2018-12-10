@@ -6,52 +6,52 @@
 
 struct CPUState
 {
-    u32 eax;
-    u32 ebx;
-    u32 ecx;
-    u32 edx;
+	u32 eax;
+	u32 ebx;
+	u32 ecx;
+	u32 edx;
 
-    u32 esi;
-    u32 edi;
-    u32 ebp;
+	u32 esi;
+	u32 edi;
+	u32 ebp;
 
-    u32 error;
+	u32 error;
 
-    u32 eip;
-    u32 cs;
-    u32 eflags;
-    u32 esp;
-    u32 ss;
+	u32 eip;
+	u32 cs;
+	u32 eflags;
+	u32 esp;
+	u32 ss;
 } __attribute__((packed));
 
 class Task
 {
-    friend class TaskManager;
+	friend class TaskManager;
 
-private:
-    u8 stack[4096]; // 4 KiB
-    CPUState *cpustate;
+  private:
+	u8 stack[4096]; // 4 KiB
+	CPUState* cpustate;
 
-public:
-    Task(const GlobalDescriptorTable *gdt, const void entrypoint());
-    ~Task();
+  public:
+	Task(const GlobalDescriptorTable* gdt, const void entrypoint());
+	~Task();
 };
 
 class TaskManager
 {
-private:
-    mutable Task *tasks[256];
-    usize total_task;
-    mutable i32 current_task;
+  private:
+	mutable Task* tasks[256];
+	usize total_task;
+	mutable i32 current_task;
 
-public:
-    TaskManager();
-    ~TaskManager();
+  public:
+	TaskManager();
+	~TaskManager();
 
-public:
-    bool add(Task *task);
+  public:
+	bool add(Task* task);
 
-    const CPUState *schedule(CPUState *cpustate) const;
+	const CPUState* schedule(CPUState* cpustate) const;
 };
 
 #endif
