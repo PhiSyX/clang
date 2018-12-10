@@ -18,8 +18,8 @@
 #include <network/arp.hh>
 #include <network/ipv4.hh>
 #include <network/icmp.hh>
-#include <network/tcp.hh>
 #include <network/udp.hh>
+#include <network/tcp.hh>
 
 // #define GRAPHICSMODE
 
@@ -135,7 +135,7 @@ public:
 class PrintfUDPHandler : public UserDatagramProtocolHandler
 {
 public:
-    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket *socket, uint8_t *data, uint16_t size)
+    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size)
     {
         char *foo = " ";
         for (int i = 0; i < size; i++)
@@ -149,13 +149,19 @@ public:
 class PrintfTCPHandler : public TransmissionControlProtocolHandler
 {
 public:
-    bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, uint8_t *data, uint16_t size)
+    bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size)
     {
         char *foo = " ";
         for (int i = 0; i < size; i++)
         {
             foo[0] = data[i];
             printf(foo);
+        }
+
+        if (size > 9 && data[0] == 'G' && data[1] == 'E' && data[2] == 'T' && data[3] == ' ' && data[4] == '/' && data[5] == ' ' && data[6] == 'H' && data[7] == 'T' && data[8] == 'T' && data[9] == 'P')
+        {
+            socket->Send((uint8_t *)"HTTP/1.1 200 OK\r\nServer: MyOS\r\nContent-Type: text/html\r\n\r\n<html><head><title>My Operating System</title></head><body><b>My Operating System</b> http://www.AlgorithMan.de</body></html>\r\n", 184);
+            socket->Disconnect();
         }
 
         return true;
@@ -314,15 +320,14 @@ extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot
 
     interrupts.Activate();
 
-    printf("\n\n\n\n\n\n\n\n\n\n");
+    printf("\n\n\n\n");
 
     arp.BroadcastMACAddress(gip_be);
 
-    tcp.Connect(gip_be, 1234);
     PrintfTCPHandler tcphandler;
-    TransmissionControlProtocolSocket *tcpsocket = tcp.Connect(gip_be, 1234);
+    TransmissionControlProtocolSocket *tcpsocket = tcp.Listen(1234);
     tcp.Bind(tcpsocket, &tcphandler);
-    tcpsocket->Send((uint8_t *)"Hello TCP!", 10);
+    // tcpsocket->Send((uint8_t*)"Hello TCP!", 10);
 
     // icmp.RequestEchoReply(gip_be);
 
