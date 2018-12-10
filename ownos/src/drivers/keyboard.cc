@@ -1,194 +1,190 @@
-#include <drivers/keyboard.hh>
+#include "drivers/keyboard.hh"
 
-using namespace myos::shared;
-using namespace myos::drivers;
-using namespace myos::COM;
+KeyboardEventHandler::KeyboardEventHandler() {}
 
-KeyboardEventHandler::KeyboardEventHandler()
+void KeyboardEventHandler::on_keydown(char) const
 {
 }
 
-void KeyboardEventHandler::OnKeyDown(char)
+void KeyboardEventHandler::on_keyup(char) const
 {
 }
 
-void KeyboardEventHandler::OnKeyUp(char)
+KeyboardDriver::KeyboardDriver(InterruptManager *input_manager,
+                               KeyboardEventHandler *$handler)
+    : InterruptHandler(input_manager, 0x21), data_port(0x60), command_port(0x64)
 {
+    handler = $handler;
 }
 
-KeyboardDriver::KeyboardDriver(InterruptManager *manager, KeyboardEventHandler *handler)
-    : InterruptHandler(manager, 0x21),
-      dataport(0x60),
-      commandport(0x64)
+KeyboardDriver::~KeyboardDriver() {}
+
+void KeyboardDriver::activate()
 {
-    this->handler = handler;
+    while (command_port.read() & 0x1)
+    {
+        data_port.read();
+    }
+
+    command_port.write(0xAE);
+    command_port.write(0x20);
+
+    u8 status = (data_port.read() | 1) & ~0x10;
+    command_port.write(0x60);
+    data_port.write(status);
+    data_port.write(0xF4);
 }
 
-KeyboardDriver::~KeyboardDriver()
+const u32
+KeyboardDriver::handle_interrupt(const u32 esp)
 {
-}
-
-void printf(char *);
-void printfHex(uint8_t);
-
-void KeyboardDriver::Activate()
-{
-    while (commandport.Read() & 0x1)
-        dataport.Read();
-    commandport.Write(0xae);
-    commandport.Write(0x20);
-    uint8_t status = (dataport.Read() | 1) & ~0x10;
-    commandport.Write(0x60);
-    dataport.Write(status);
-    dataport.Write(0xf4);
-}
-
-uint32_t KeyboardDriver::HandleInterrupt(uint32_t esp)
-{
-    uint8_t key = dataport.Read();
+    /* static */ u8 key = data_port.read();
 
     if (handler == 0)
+    {
         return esp;
+    }
 
     if (key < 0x80)
     {
         switch (key)
         {
         case 0x02:
-            handler->OnKeyDown('1');
+            handler->on_keydown('1');
             break;
         case 0x03:
-            handler->OnKeyDown('2');
+            handler->on_keydown('2');
             break;
         case 0x04:
-            handler->OnKeyDown('3');
+            handler->on_keydown('3');
             break;
         case 0x05:
-            handler->OnKeyDown('4');
+            handler->on_keydown('4');
             break;
         case 0x06:
-            handler->OnKeyDown('5');
+            handler->on_keydown('5');
             break;
         case 0x07:
-            handler->OnKeyDown('6');
+            handler->on_keydown('6');
             break;
         case 0x08:
-            handler->OnKeyDown('7');
+            handler->on_keydown('7');
             break;
         case 0x09:
-            handler->OnKeyDown('8');
+            handler->on_keydown('8');
             break;
         case 0x0A:
-            handler->OnKeyDown('9');
+            handler->on_keydown('9');
             break;
         case 0x0B:
-            handler->OnKeyDown('0');
+            handler->on_keydown('0');
             break;
 
         case 0x10:
-            handler->OnKeyDown('q');
+            handler->on_keydown('q');
             break;
         case 0x11:
-            handler->OnKeyDown('w');
+            handler->on_keydown('w');
             break;
         case 0x12:
-            handler->OnKeyDown('e');
+            handler->on_keydown('e');
             break;
         case 0x13:
-            handler->OnKeyDown('r');
+            handler->on_keydown('r');
             break;
         case 0x14:
-            handler->OnKeyDown('t');
+            handler->on_keydown('t');
             break;
         case 0x15:
-            handler->OnKeyDown('z');
+            handler->on_keydown('z');
             break;
         case 0x16:
-            handler->OnKeyDown('u');
+            handler->on_keydown('u');
             break;
         case 0x17:
-            handler->OnKeyDown('i');
+            handler->on_keydown('i');
             break;
         case 0x18:
-            handler->OnKeyDown('o');
+            handler->on_keydown('o');
             break;
         case 0x19:
-            handler->OnKeyDown('p');
+            handler->on_keydown('p');
             break;
 
         case 0x1E:
-            handler->OnKeyDown('a');
+            handler->on_keydown('a');
             break;
         case 0x1F:
-            handler->OnKeyDown('s');
+            handler->on_keydown('s');
             break;
         case 0x20:
-            handler->OnKeyDown('d');
+            handler->on_keydown('d');
             break;
         case 0x21:
-            handler->OnKeyDown('f');
+            handler->on_keydown('f');
             break;
         case 0x22:
-            handler->OnKeyDown('g');
+            handler->on_keydown('g');
             break;
         case 0x23:
-            handler->OnKeyDown('h');
+            handler->on_keydown('h');
             break;
         case 0x24:
-            handler->OnKeyDown('j');
+            handler->on_keydown('j');
             break;
         case 0x25:
-            handler->OnKeyDown('k');
+            handler->on_keydown('k');
             break;
         case 0x26:
-            handler->OnKeyDown('l');
+            handler->on_keydown('l');
             break;
 
         case 0x2C:
-            handler->OnKeyDown('y');
+            handler->on_keydown('y');
             break;
         case 0x2D:
-            handler->OnKeyDown('x');
+            handler->on_keydown('x');
             break;
         case 0x2E:
-            handler->OnKeyDown('c');
+            handler->on_keydown('c');
             break;
         case 0x2F:
-            handler->OnKeyDown('v');
+            handler->on_keydown('v');
             break;
         case 0x30:
-            handler->OnKeyDown('b');
+            handler->on_keydown('b');
             break;
         case 0x31:
-            handler->OnKeyDown('n');
+            handler->on_keydown('n');
             break;
         case 0x32:
-            handler->OnKeyDown('m');
+            handler->on_keydown('m');
             break;
         case 0x33:
-            handler->OnKeyDown(',');
+            handler->on_keydown(',');
             break;
         case 0x34:
-            handler->OnKeyDown('.');
+            handler->on_keydown('.');
             break;
         case 0x35:
-            handler->OnKeyDown('-');
+            handler->on_keydown('-');
             break;
 
         case 0x1C:
-            handler->OnKeyDown('\n');
+            handler->on_keydown('\n');
             break;
         case 0x39:
-            handler->OnKeyDown(' ');
+            handler->on_keydown(' ');
             break;
 
         default:
         {
             printf("KEYBOARD 0x");
-            printfHex(key);
+            printh(key);
             break;
         }
         }
     }
+
     return esp;
 }

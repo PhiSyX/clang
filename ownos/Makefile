@@ -1,34 +1,37 @@
-GCCPARAMS = -m32 -Iinclude -fno-use-cxa-atexit -nostdlib -fno-builtin -fno-rtti -fno-exceptions -fno-leading-underscore -Wno-write-strings
+GCCPARAMS = -m32 -Iinclude -nostdlib \
+	-fno-builtin -fno-exceptions -fno-leading-underscore \
+	-fno-rtti -fno-use-cxa-atexit -Wno-write-strings
+
 ASPARAMS = --32
 LDPARAMS = -melf_i386
 
-objects = obj/loader.o \
-          obj/gdt.o \
-          obj/drivers/driver.o \
-          obj/COM/port.o \
-          obj/COM/interruptstubs.o \
-          obj/COM/interrupts.o \
-          obj/COM/pci.o \
-          obj/drivers/amd_am79c973.o \
-          obj/drivers/ata.o \
-          obj/drivers/keyboard.o \
-          obj/drivers/mouse.o \
-          obj/drivers/vga.o \
-          obj/GUI/widget.o \
-          obj/GUI/window.o \
-          obj/GUI/desktop.o \
-          obj/network/arp.o \
-          obj/network/etherframe.o \
-          obj/network/icmp.o \
-          obj/network/ipv4.o \
-          obj/network/tcp.o \
-          obj/network/udp.o \
-          obj/memorymanagement.o \
-          obj/multitasking.o \
-          obj/syscalls.o \
-          obj/kernel.o
+objects = \
+	obj/loader.o \
+    obj/gdt.o \
+    obj/memory.o \
+    obj/drivers/driver.o \
+    obj/hardware/port.o \
+    obj/hardware/interrupts_stub.o obj/hardware/interrupts.o \
+    obj/syscalls.o \
+    obj/multitasking.o \
+    obj/drivers/AMD/am79c973.o \
+    obj/hardware/pci.o \
+    obj/drivers/keyboard.o \
+    obj/drivers/mouse.o \
+    obj/drivers/vga.o \
+    obj/drivers/ata.o \
+    obj/gui/widget.o \
+    obj/gui/window.o \
+    obj/gui/desktop.o \
+    obj/net/etherframe.o \
+    obj/net/arp.o \
+    obj/net/ipv4.o \
+    obj/net/icmp.o \
+    obj/net/udp.o \
+    obj/net/tcp.o \
+	obj/kernel.o
 
-obj/%.o: src/%.cc
+obj/%.o: src/%.cpp
 	mkdir -p $(@D)
 	gcc $(GCCPARAMS) -c -o $@ $<
 
@@ -39,19 +42,18 @@ obj/%.o: src/%.s
 mykernel.bin: linker.ld $(objects)
 	ld $(LDPARAMS) -T $< -o $@ $(objects)
 
+# Création de l'ISO pour une VM
 mykernel.iso: mykernel.bin
-	mkdir iso
-	mkdir iso/boot
-	mkdir iso/boot/grub
-	cp mykernel.bin iso/boot/mykernel.bin
-	echo 'set timeout=0'                      > iso/boot/grub/grub.cfg
-	echo 'set default=0'                     >> iso/boot/grub/grub.cfg
-	echo ''                                  >> iso/boot/grub/grub.cfg
-	echo 'menuentry "My Operating System" {' >> iso/boot/grub/grub.cfg
-	echo '  multiboot /boot/mykernel.bin'    >> iso/boot/grub/grub.cfg
-	echo '  boot'                            >> iso/boot/grub/grub.cfg
-	echo '}'                                 >> iso/boot/grub/grub.cfg
-	grub-mkrescue --output=mykernel.iso iso
+	mkdir -p iso/boot/grub
+	cp $< iso/boot/
+	@echo 'set timeout=0' > iso/boot/grub/grub.cfg
+	@echo 'set default=0' >> iso/boot/grub/grub.cfg
+	@echo '' >> iso/boot/grub/grub.cfg
+	@echo 'menuentry "Mon superbe OS" {' >> iso/boot/grub/grub.cfg
+	@echo '  multiboot /boot/mykernel.bin' >> iso/boot/grub/grub.cfg
+	@echo '  boot' >> iso/boot/grub/grub.cfg
+	@echo '}' >> iso/boot/grub/grub.cfg
+	grub-mkrescue --output=$@ iso
 	rm -rf iso
 
 run: mykernel.iso
@@ -63,4 +65,4 @@ install: mykernel.bin
 
 .PHONY: clean
 clean:
-	rm -rf obj mykernel.bin mykernel.iso
+	rm -rf $(objects) mykernel.bin mykernel.iso obj

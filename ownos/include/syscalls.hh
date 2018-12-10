@@ -1,23 +1,19 @@
-#ifndef __MYOS__SYSCALLS_H
-#define __MYOS__SYSCALLS_H
+#ifndef __SYSCALLS_HPP__
+#define __SYSCALLS_HPP__
 
-#include <shared/types.hh>
 #include <COM/interrupts.hh>
-#include <multitasking.hh>
+#include <types.hh>
 
-namespace myos
+void printf(char *);
+
+class SyscallHandler : public InterruptHandler
 {
+public:
+    SyscallHandler(InterruptManager *im, const u8 in);
+    ~SyscallHandler();
 
-    class SyscallHandler : public COM::InterruptHandler
-    {
-
-    public:
-        SyscallHandler(COM::InterruptManager *interruptManager, myos::shared::uint8_t InterruptNumber);
-        ~SyscallHandler();
-
-        virtual myos::shared::uint32_t HandleInterrupt(myos::shared::uint32_t esp);
-    };
-
-}
+public:
+    virtual const u32 handle_interrupt(const u32 esp) const;
+};
 
 #endif

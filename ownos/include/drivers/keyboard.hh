@@ -1,38 +1,40 @@
-#ifndef __MYOS__DRIVERS__KEYBOARD_H
-#define __MYOS__DRIVERS__KEYBOARD_H
+#ifndef __KEYBOARD_HPP__
+#define __KEYBOARD_HPP__
 
-#include <shared/types.hh>
+#include <driver.hh>
 #include <COM/interrupts.hh>
-#include <drivers/driver.hh>
 #include <COM/port.hh>
+#include <shared/types.hh>
 
-namespace myos
+void printf(char *);
+void printh(u8);
+
+class KeyboardEventHandler
 {
-    namespace drivers
-    {
-        class KeyboardEventHandler
-        {
-        public:
-            KeyboardEventHandler();
+public:
+  KeyboardEventHandler();
 
-            virtual void OnKeyDown(char);
-            virtual void OnKeyUp(char);
-        };
+public:
+  virtual void on_keydown(char) const;
+  virtual void on_keyup(char) const;
+};
 
-        class KeyboardDriver : public myos::COM::InterruptHandler, public Driver
-        {
-            myos::COM::Port8Bit dataport;
-            myos::COM::Port8Bit commandport;
+class KeyboardDriver
+    : public InterruptHandler,
+      public Driver
+{
+  Port8Bit data_port;
+  Port8Bit command_port;
 
-            KeyboardEventHandler *handler;
+  KeyboardEventHandler *handler;
 
-        public:
-            KeyboardDriver(myos::COM::InterruptManager *manager, KeyboardEventHandler *handler);
-            ~KeyboardDriver();
-            virtual myos::shared::uint32_t HandleInterrupt(myos::shared::uint32_t esp);
-            virtual void Activate();
-        };
-    }
-}
+public:
+  KeyboardDriver(InterruptManager *im, KeyboardEventHandler *handler);
+  ~KeyboardDriver();
+
+public:
+  virtual /* contains static */ const u32 handle_interrupt(const u32 esp);
+  virtual /* contains static */ void activate();
+};
 
 #endif

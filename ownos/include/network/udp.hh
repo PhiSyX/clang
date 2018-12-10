@@ -1,76 +1,79 @@
-#ifndef __MYOS__NETWORK__UDP_H
-#define __MYOS__NETWORK__UDP_H
+#ifndef __UDP_HPP__
+#define __UDP_HPP__
 
-#include <shared/types.hh>
 #include <network/ipv4.hh>
-#include <memorymanagement.hh>
+#include <shared/types.hh>
 
-namespace myos
+// User Datagram Protocol
+
+struct UDPHeader
 {
-    namespace network
-    {
-        struct UserDatagramProtocolHeader
-        {
-            shared::uint16_t srcPort;
-            shared::uint16_t dstPort;
-            shared::uint16_t length;
-            shared::uint16_t checksum;
-        } __attribute__((packed));
+    u16 src_port;
+    u16 dst_port;
+    u16 length;
+    u16 checksum;
+} __attribute__((packed));
 
-        class UserDatagramProtocolSocket;
-        class UserDatagramProtocolProvider;
+class UDPSocket;
+class UDPProvider;
 
-        class UserDatagramProtocolHandler
-        {
-        public:
-            UserDatagramProtocolHandler();
-            ~UserDatagramProtocolHandler();
-            virtual void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
-        };
+class UDPHandler
+{
+public:
+    UDPHandler();
+    ~UDPHandler();
 
-        class UserDatagramProtocolSocket
-        {
-            friend class UserDatagramProtocolProvider;
+public:
+    virtual void handle_udp_message(UDPSocket *socket,
+                                    const u8 *data,
+                                    const u16 size);
+};
 
-        protected:
-            shared::uint16_t remotePort;
-            shared::uint32_t remoteIP;
-            shared::uint16_t localPort;
-            shared::uint32_t localIP;
-            UserDatagramProtocolProvider *backend;
-            UserDatagramProtocolHandler *handler;
-            bool listening;
+class UDPSocket
+{
+    friend class UDPProvider;
 
-        public:
-            UserDatagramProtocolSocket(UserDatagramProtocolProvider *backend);
-            ~UserDatagramProtocolSocket();
-            virtual void HandleUserDatagramProtocolMessage(shared::uint8_t *data, shared::uint16_t size);
-            virtual void Send(shared::uint8_t *data, shared::uint16_t size);
-            virtual void Disconnect();
-        };
+protected:
+    u16 remote_port;
+    u32 remote_ip;
+    u16 local_port;
+    u32 local_ip;
+    UDPProvider *backend;
+    UDPHandler *handler;
+    bool listening;
 
-        class UserDatagramProtocolProvider : InternetProtocolHandler
-        {
-        protected:
-            UserDatagramProtocolSocket *sockets[65535];
-            shared::uint16_t numSockets;
-            shared::uint16_t freePort;
+public:
+    UDPSocket(UDPProvider *backend);
+    ~UDPSocket();
 
-        public:
-            UserDatagramProtocolProvider(InternetProtocolProvider *backend);
-            ~UserDatagramProtocolProvider();
+public:
+    virtual void handle_udp_message(const u8 *data, const u16 size);
+    virtual void send(const u8 *data, const u16 size);
+    virtual void disconnect();
+};
 
-            virtual bool OnInternetProtocolReceived(shared::uint32_t srcIP_BE, shared::uint32_t dstIP_BE,
-                                                    shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
+class UDPProvider : IPHandler
+{
+protected:
+    UDPSocket *sockets[65535];
+    u16 total_sockets;
+    u16 free_port;
 
-            virtual UserDatagramProtocolSocket *Connect(shared::uint32_t ip, shared::uint16_t port);
-            virtual UserDatagramProtocolSocket *Listen(shared::uint16_t port);
-            virtual void Disconnect(UserDatagramProtocolSocket *socket);
-            virtual void Send(UserDatagramProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
+public:
+    UDPProvider(IPProvider *backend);
+    ~UDPProvider();
 
-            virtual void Bind(UserDatagramProtocolSocket *socket, UserDatagramProtocolHandler *handler);
-        };
-    }
-}
+    virtual const bool on_ip_recv(const u32 src_ip_be,
+                                  const u32 dst_ip_be,
+                                  const u8 *ip_payload,
+                                  const u32 size) const;
+
+    virtual UDPSocket *connect(const u32 ip, const u16 port);
+    virtual UDPSocket *listen(const u16 port);
+    virtual void disconnect(UDPSocket *socket);
+    virtual void send(const UDPSocket *socket, const u8 *data, const u16 size);
+
+    virtual void bind(UDPSocket *socket, UDPHandler *handler);
+};
 
 #endif

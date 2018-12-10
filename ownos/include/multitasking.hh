@@ -1,63 +1,57 @@
-#ifndef __MYOS__MULTITASKING_H
-#define __MYOS__MULTITASKING_H
+#ifndef __MULTITASKING_HPP__
+#define __MULTITASKING_HPP__
 
-#include <shared/types.hh>
 #include <gdt.hh>
+#include <shared/types.hh>
 
-namespace myos
+struct CPUState
 {
-    struct CPUState
-    {
-        shared::uint32_t eax;
-        shared::uint32_t ebx;
-        shared::uint32_t ecx;
-        shared::uint32_t edx;
+    u32 eax;
+    u32 ebx;
+    u32 ecx;
+    u32 edx;
 
-        shared::uint32_t esi;
-        shared::uint32_t edi;
-        shared::uint32_t ebp;
+    u32 esi;
+    u32 edi;
+    u32 ebp;
 
-        /*
-        shared::uint32_t gs;
-        shared::uint32_t fs;
-        shared::uint32_t es;
-        shared::uint32_t ds;
-        */
-        shared::uint32_t error;
+    u32 error;
 
-        shared::uint32_t eip;
-        shared::uint32_t cs;
-        shared::uint32_t eflags;
-        shared::uint32_t esp;
-        shared::uint32_t ss;
-    } __attribute__((packed));
+    u32 eip;
+    u32 cs;
+    u32 eflags;
+    u32 esp;
+    u32 ss;
+} __attribute__((packed));
 
-    class Task
-    {
-        friend class TaskManager;
+class Task
+{
+    friend class TaskManager;
 
-    private:
-        shared::uint8_t stack[4096]; // 4 KiB
-        CPUState *cpustate;
+private:
+    u8 stack[4096]; // 4 KiB
+    CPUState *cpustate;
 
-    public:
-        Task(GlobalDescriptorTable *gdt, void entrypoint());
-        ~Task();
-    };
+public:
+    Task(const GlobalDescriptorTable *gdt, const void entrypoint());
+    ~Task();
+};
 
-    class TaskManager
-    {
-    private:
-        Task *tasks[256];
-        int numTasks;
-        int currentTask;
+class TaskManager
+{
+private:
+    mutable Task *tasks[256];
+    usize total_task;
+    mutable i32 current_task;
 
-    public:
-        TaskManager();
-        ~TaskManager();
-        bool AddTask(Task *task);
-        CPUState *Schedule(CPUState *cpustate);
-    };
-}
+public:
+    TaskManager();
+    ~TaskManager();
+
+public:
+    bool add(Task *task);
+
+    const CPUState *schedule(CPUState *cpustate) const;
+};
 
 #endif

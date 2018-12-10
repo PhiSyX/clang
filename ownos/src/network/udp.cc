@@ -1,168 +1,185 @@
-#include <network/udp.hh>
+#include "network/udp.hh"
+#include "memory.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::network;
+UDPHandler::UDPHandler() {}
 
-UserDatagramProtocolHandler::UserDatagramProtocolHandler()
+UDPHandler::~UDPHandler() {}
+
+void UDPHandler::handle_udp_message(UDPSocket *socket,
+                                    const u8 *data,
+                                    const u16 size)
 {
 }
 
-UserDatagramProtocolHandler::~UserDatagramProtocolHandler()
+UDPSocket::UDPSocket(UDPProvider *$backend)
 {
-}
-
-void UserDatagramProtocolHandler::HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket *socket, uint8_t *data, uint16_t size)
-{
-}
-
-UserDatagramProtocolSocket::UserDatagramProtocolSocket(UserDatagramProtocolProvider *backend)
-{
-    this->backend = backend;
+    backend = $backend;
     handler = 0;
     listening = false;
 }
 
-UserDatagramProtocolSocket::~UserDatagramProtocolSocket()
-{
-}
+UDPSocket::~UDPSocket() {}
 
-void UserDatagramProtocolSocket::HandleUserDatagramProtocolMessage(uint8_t *data, uint16_t size)
+void UDPSocket::handle_udp_message(const u8 *data, const u16 size)
 {
     if (handler != 0)
-        handler->HandleUserDatagramProtocolMessage(this, data, size);
-}
-
-void UserDatagramProtocolSocket::Send(uint8_t *data, uint16_t size)
-{
-    backend->Send(this, data, size);
-}
-
-void UserDatagramProtocolSocket::Disconnect()
-{
-    backend->Disconnect(this);
-}
-
-UserDatagramProtocolProvider::UserDatagramProtocolProvider(InternetProtocolProvider *backend)
-    : InternetProtocolHandler(backend, 0x11)
-{
-    for (int i = 0; i < 65535; i++)
-        sockets[i] = 0;
-    numSockets = 0;
-    freePort = 1024;
-}
-
-UserDatagramProtocolProvider::~UserDatagramProtocolProvider()
-{
-}
-
-bool UserDatagramProtocolProvider::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE,
-                                                              uint8_t *internetprotocolPayload, uint32_t size)
-{
-    if (size < sizeof(UserDatagramProtocolHeader))
-        return false;
-
-    UserDatagramProtocolHeader *msg = (UserDatagramProtocolHeader *)internetprotocolPayload;
-    uint16_t localPort = msg->dstPort;
-    uint16_t remotePort = msg->srcPort;
-
-    UserDatagramProtocolSocket *socket = 0;
-    for (uint16_t i = 0; i < numSockets && socket == 0; i++)
     {
-        if (sockets[i]->localPort == msg->dstPort && sockets[i]->localIP == dstIP_BE && sockets[i]->listening)
+        handler->handle_udp_message(this, data, size);
+    }
+}
+
+void UDPSocket::send(const u8 *data, const u16 size)
+{
+    backend->send(this, data, size);
+}
+
+void UDPSocket::disconnect()
+{
+    backend->disconnect(this);
+}
+
+UDPProvider::UDPProvider(IPProvider *backend)
+    : IPHandler(backend, 0x11)
+{
+    for (u32 i = 0; i < 65535; i++)
+    {
+        sockets[i] = 0;
+    }
+    total_sockets = 0;
+    free_port = 1024;
+}
+
+UDPProvider::~UDPProvider() {}
+
+const bool
+UDPProvider::on_ip_recv(const u32 src_ip_be,
+                        const u32 dst_ip_be,
+                        const u8 *ip_payload,
+                        const u32 size) const
+{
+    if (size < sizeof(UDPHeader))
+    {
+        return false;
+    }
+
+    UDPHeader *msg = (UDPHeader *)ip_payload;
+    u16 local_port = msg->dst_port;
+    u16 remote_port = msg->src_port;
+
+    UDPSocket *socket = 0;
+    for (u16 i = 0; i < total_sockets && socket == 0; i++)
+    {
+        if (sockets[i]->local_port == msg->dst_port &&
+            sockets[i]->local_ip == dst_ip_be && sockets[i]->listening)
         {
             socket = sockets[i];
             socket->listening = false;
-            socket->remotePort = msg->srcPort;
-            socket->remoteIP = srcIP_BE;
+            socket->remote_port = msg->src_port;
+            socket->remote_ip = src_ip_be;
         }
-
-        else if (sockets[i]->localPort == msg->dstPort && sockets[i]->localIP == dstIP_BE && sockets[i]->remotePort == msg->srcPort && sockets[i]->remoteIP == srcIP_BE)
+        else if (sockets[i]->local_port == msg->dst_port &&
+                 sockets[i]->local_ip == dst_ip_be &&
+                 sockets[i]->remote_port == msg->src_port &&
+                 sockets[i]->remote_ip == src_ip_be)
+        {
             socket = sockets[i];
+        }
     }
 
     if (socket != 0)
-        socket->HandleUserDatagramProtocolMessage(internetprotocolPayload + sizeof(UserDatagramProtocolHeader),
-                                                  size - sizeof(UserDatagramProtocolHeader));
+    {
+        socket->handle_udp_message(ip_payload + sizeof(UDPHeader),
+                                   size - sizeof(UDPHeader));
+    }
 
     return false;
 }
 
-UserDatagramProtocolSocket *UserDatagramProtocolProvider::Connect(uint32_t ip, uint16_t port)
+UDPSocket *
+UDPProvider::connect(const u32 ip, const u16 port)
 {
-    UserDatagramProtocolSocket *socket = (UserDatagramProtocolSocket *)MemoryManager::activeMemoryManager->malloc(sizeof(UserDatagramProtocolSocket));
+    UDPSocket *socket =
+        (UDPSocket *)MemoryManager::active_memory_manager->malloc(sizeof(UDPSocket));
 
     if (socket != 0)
     {
-        new (socket) UserDatagramProtocolSocket(this);
+        socket = new UDPSocket(this);
 
-        socket->remotePort = port;
-        socket->remoteIP = ip;
-        socket->localPort = freePort++;
-        socket->localIP = backend->GetIPAddress();
+        socket->remote_port = port;
+        socket->remote_ip = ip;
+        socket->local_port = free_port++;
+        socket->local_ip = backend->get_ip_address();
 
-        socket->remotePort = ((socket->remotePort & 0xFF00) >> 8) | ((socket->remotePort & 0x00FF) << 8);
-        socket->localPort = ((socket->localPort & 0xFF00) >> 8) | ((socket->localPort & 0x00FF) << 8);
+        socket->remote_port = ((socket->remote_port & 0xFF00) >> 8) |
+                              ((socket->remote_port & 0x00FF) << 8);
+        socket->local_port = ((socket->local_port & 0xFF00) >> 8) |
+                             ((socket->local_port & 0x00FF) << 8);
 
-        sockets[numSockets++] = socket;
+        sockets[total_sockets++] = socket;
     }
 
     return socket;
 }
 
-UserDatagramProtocolSocket *UserDatagramProtocolProvider::Listen(uint16_t port)
+UDPSocket *
+UDPProvider::listen(const u16 port)
 {
-    UserDatagramProtocolSocket *socket = (UserDatagramProtocolSocket *)MemoryManager::activeMemoryManager->malloc(sizeof(UserDatagramProtocolSocket));
+    UDPSocket *socket =
+        (UDPSocket *)MemoryManager::active_memory_manager->malloc(sizeof(UDPSocket));
 
     if (socket != 0)
     {
-        new (socket) UserDatagramProtocolSocket(this);
+        socket = new UDPSocket(this);
 
         socket->listening = true;
-        socket->localPort = port;
-        socket->localIP = backend->GetIPAddress();
+        socket->local_port = port;
+        socket->local_ip = backend->get_ip_address();
 
-        socket->localPort = ((socket->localPort & 0xFF00) >> 8) | ((socket->localPort & 0x00FF) << 8);
+        socket->local_port = ((socket->local_port & 0xFF00) >> 8) |
+                             ((socket->local_port & 0x00FF) << 8);
 
-        sockets[numSockets++] = socket;
+        sockets[total_sockets++] = socket;
     }
 
     return socket;
 }
 
-void UserDatagramProtocolProvider::Disconnect(UserDatagramProtocolSocket *socket)
+void UDPProvider::disconnect(UDPSocket *socket)
 {
-    for (uint16_t i = 0; i < numSockets && socket == 0; i++)
+    for (u16 i = 0; i < total_sockets && socket == 0; i++)
+    {
         if (sockets[i] == socket)
         {
-            sockets[i] = sockets[--numSockets];
-            MemoryManager::activeMemoryManager->free(socket);
+            sockets[i] = sockets[--total_sockets];
+            MemoryManager::active_memory_manager->free(socket);
             break;
         }
+    }
 }
 
-void UserDatagramProtocolProvider::Send(UserDatagramProtocolSocket *socket, uint8_t *data, uint16_t size)
+void UDPProvider::send(const UDPSocket *socket, const u8 *data, const u16 size)
 {
-    uint16_t totalLength = size + sizeof(UserDatagramProtocolHeader);
-    uint8_t *buffer = (uint8_t *)MemoryManager::activeMemoryManager->malloc(totalLength);
-    uint8_t *buffer2 = buffer + sizeof(UserDatagramProtocolHeader);
+    u16 total_length = size + sizeof(UDPHeader);
+    u8 *buffer = (u8 *)MemoryManager::active_memory_manager->malloc(total_length);
+    u8 *buffer2 = buffer + sizeof(UDPHeader);
 
-    UserDatagramProtocolHeader *msg = (UserDatagramProtocolHeader *)buffer;
-
-    msg->srcPort = socket->localPort;
-    msg->dstPort = socket->remotePort;
-    msg->length = ((totalLength & 0x00FF) << 8) | ((totalLength & 0xFF00) >> 8);
+    UDPHeader *msg = (UDPHeader *)buffer;
+    msg->src_port = socket->local_port;
+    msg->dst_port = socket->remote_port;
+    msg->length = ((total_length & 0x00FF) << 8) | ((total_length & 0xFF00) >> 8);
 
     for (int i = 0; i < size; i++)
+    {
         buffer2[i] = data[i];
+    }
 
     msg->checksum = 0;
-    InternetProtocolHandler::Send(socket->remoteIP, buffer, totalLength);
+    IPHandler::send(socket->remote_ip, buffer, total_length);
 
-    MemoryManager::activeMemoryManager->free(buffer);
+    MemoryManager::active_memory_manager->free(buffer);
 }
 
-void UserDatagramProtocolProvider::Bind(UserDatagramProtocolSocket *socket, UserDatagramProtocolHandler *handler)
+void UDPProvider::bind(UDPSocket *socket, UDPHandler *handler)
 {
     socket->handler = handler;
 }

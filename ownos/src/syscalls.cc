@@ -1,23 +1,16 @@
-#include <syscalls.hh>
+#include "syscalls.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::COM;
-
-SyscallHandler::SyscallHandler(InterruptManager *interruptManager, uint8_t InterruptNumber)
-    : InterruptHandler(interruptManager, InterruptNumber + interruptManager->HardwareInterruptOffset())
+SyscallHandler::SyscallHandler(InterruptManager *im, const u8 in)
+    : InterruptHandler(im, in + im->hardware_interrupt_offset)
 {
 }
 
-SyscallHandler::~SyscallHandler()
-{
-}
+SyscallHandler::~SyscallHandler() {}
 
-void printf(char *);
-
-uint32_t SyscallHandler::HandleInterrupt(uint32_t esp)
+const u32
+SyscallHandler::handle_interrupt(const u32 esp) const
 {
-    CPUState *cpu = (CPUState *)esp;
+    const CPUState *cpu = (CPUState *)esp;
 
     switch (cpu->eax)
     {

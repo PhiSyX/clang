@@ -1,73 +1,72 @@
-#ifndef __MYOS__NETWORK__IPV4_H
-#define __MYOS__NETWORK__IPV4_H
+#ifndef __IPV4_HPP__
+#define __IPV4_HPP__
 
-#include <shared/types.hh>
-#include <network/etherframe.hh>
 #include <network/arp.hh>
+#include <network/etherframe.hh>
+#include <types.hh>
 
-namespace myos
+struct IPV4Message
 {
-    namespace network
-    {
+    u8 header_length : 4;
+    u8 version : 4;
+    u8 tos;
+    u16 total_length;
 
-        struct InternetProtocolV4Message
-        {
-            shared::uint8_t headerLength : 4;
-            shared::uint8_t version : 4;
-            shared::uint8_t tos;
-            shared::uint16_t totalLength;
+    u16 ident;
+    u16 flags_and_offset;
 
-            shared::uint16_t ident;
-            shared::uint16_t flagsAndOffset;
+    u8 time_to_live;
+    u8 protocol;
+    u16 checksum;
 
-            shared::uint8_t timeToLive;
-            shared::uint8_t protocol;
-            shared::uint16_t checksum;
+    u32 src_ip;
+    u32 dst_ip;
+} __attribute__((packed));
 
-            shared::uint32_t srcIP;
-            shared::uint32_t dstIP;
-        } __attribute__((packed));
+class IPProvider;
 
-        class InternetProtocolProvider;
+class IPHandler
+{
+protected:
+    IPProvider *backend;
+    u8 ip_protocol;
 
-        class InternetProtocolHandler
-        {
-        protected:
-            InternetProtocolProvider *backend;
-            shared::uint8_t ip_protocol;
+public:
+    IPHandler(IPProvider *backend, const u8 protocol);
+    ~IPHandler();
 
-        public:
-            InternetProtocolHandler(InternetProtocolProvider *backend, shared::uint8_t protocol);
-            ~InternetProtocolHandler();
+    virtual const bool on_ip_recv(const u32 src_ip_be,
+                                  const u32 dst_ip_be,
+                                  const u8 *ip_payload,
+                                  const u32 size) const;
+    void send(const u32 dst_ip_be, const u8 *ip_payload, const u32 size);
+};
 
-            virtual bool OnInternetProtocolReceived(shared::uint32_t srcIP_BE, shared::uint32_t dstIP_BE,
-                                                    shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
-            void Send(shared::uint32_t dstIP_BE, shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
-        };
+class IPProvider : public EtherFrameHandler
+{
+    friend class IPHandler;
 
-        class InternetProtocolProvider : public EtherFrameHandler
-        {
-            friend class InternetProtocolHandler;
+protected:
+    IPHandler *handlers[255];
+    ARP *arp;
+    u32 gateway_ip;
+    u32 subnet_mask;
 
-        protected:
-            InternetProtocolHandler *handlers[255];
-            AddressResolutionProtocol *arp;
-            shared::uint32_t gatewayIP;
-            shared::uint32_t subnetMask;
+public:
+    IPProvider(EtherFrameProvider *backend,
+               ARP *arp,
+               const u32 gateway_ip,
+               const u32 subnet_mask);
+    ~IPProvider();
 
-        public:
-            InternetProtocolProvider(EtherFrameProvider *backend,
-                                     AddressResolutionProtocol *arp,
-                                     shared::uint32_t gatewayIP, shared::uint32_t subnetMask);
-            ~InternetProtocolProvider();
-
-            bool OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size);
-
-            void Send(shared::uint32_t dstIP_BE, shared::uint8_t protocol, shared::uint8_t *buffer, shared::uint32_t size);
-
-            static shared::uint16_t Checksum(shared::uint16_t *data, shared::uint32_t lengthInBytes);
-        };
-    }
-}
+public:
+    const bool on_etherframe_recv(const u8 *etherframe_payload,
+                                  const u32 size) const;
+    void send(const u32 dst_ip_be,
+              const u8 protocol,
+              const u8 *buffer,
+              const u32 size);
+    static u16 checksum(const u16 *data, const u32 length_in_bytes);
+};
 
 #endif

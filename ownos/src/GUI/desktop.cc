@@ -1,64 +1,64 @@
-#include <GUI/desktop.hh>
+#include "gui/desktop.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::GUI;
-
-Desktop::Desktop(int32_t w, int32_t h,
-                 uint8_t r, uint8_t g, uint8_t b)
-    : CompositeWidget(0, 0, 0, w, h, r, g, b),
-      MouseEventHandler()
+Desktop::Desktop(const i32 w, const i32 h, const u8 r, const u8 g, const u8 b)
+    : CompositeWidget(0, 0, 0, w, h, r, g, b), MouseEventHandler()
 {
-    MouseX = w / 2;
-    MouseY = h / 2;
+    mousex = w / 2;
+    mousey = h / 2;
 }
 
-Desktop::~Desktop()
-{
-}
+Desktop::~Desktop() {}
 
-void Desktop::Draw(GraphicsContext *gc)
+void Desktop::draw(VGA *gc)
 {
-    CompositeWidget::Draw(gc);
+    CompositeWidget::draw(gc);
 
-    for (int i = 0; i < 4; i++)
+    for (u8 i = 0; i < 4; i++)
     {
-        gc->PutPixel(MouseX - i, MouseY, 0xFF, 0xFF, 0xFF);
-        gc->PutPixel(MouseX + i, MouseY, 0xFF, 0xFF, 0xFF);
-        gc->PutPixel(MouseX, MouseY - i, 0xFF, 0xFF, 0xFF);
-        gc->PutPixel(MouseX, MouseY + i, 0xFF, 0xFF, 0xFF);
+        gc->put_pixel(mousex - i, mousey, 0xFF, 0xFF, 0xFF);
+        gc->put_pixel(mousex + i, mousey, 0xFF, 0xFF, 0xFF);
+        gc->put_pixel(mousex, mousey - i, 0xFF, 0xFF, 0xFF);
+        gc->put_pixel(mousex, mousey + i, 0xFF, 0xFF, 0xFF);
     }
 }
 
-void Desktop::OnMouseDown(uint8_t button)
+void Desktop::on_mousedown(const u8 button)
 {
-    CompositeWidget::OnMouseDown(MouseX, MouseY, button);
+    CompositeWidget::on_mousedown(mousex, mousey, button);
 }
 
-void Desktop::OnMouseUp(uint8_t button)
+void Desktop::on_mouseup(const u8 button)
 {
-    CompositeWidget::OnMouseUp(MouseX, MouseY, button);
+    CompositeWidget::on_mouseup(mousex, mousey, button);
 }
 
-void Desktop::OnMouseMove(int x, int y)
+void Desktop::on_mousemove(i32 x, i32 y)
 {
     x /= 4;
     y /= 4;
 
-    int32_t newMouseX = MouseX + x;
-    if (newMouseX < 0)
-        newMouseX = 0;
-    if (newMouseX >= w)
-        newMouseX = w - 1;
+    i32 mouseX = mousex + x;
+    if (mouseX < 0)
+    {
+        mouseX = 0;
+    }
+    if (mouseX >= width)
+    {
+        mouseX = width - 1;
+    }
 
-    int32_t newMouseY = MouseY + y;
-    if (newMouseY < 0)
-        newMouseY = 0;
-    if (newMouseY >= h)
-        newMouseY = h - 1;
+    i32 mouseY = mousey + y;
+    if (mouseY < 0)
+    {
+        mouseY = 0;
+    }
+    if (mouseY >= height)
+    {
+        mouseY = height - 1;
+    }
 
-    CompositeWidget::OnMouseMove(MouseX, MouseY, newMouseX, newMouseY);
+    CompositeWidget::on_mousemove(mousex, mousey, mouseX, mouseY);
 
-    MouseX = newMouseX;
-    MouseY = newMouseY;
+    mousex = mouseX;
+    mousey = mouseY;
 }

@@ -1,44 +1,43 @@
+#ifndef __MOUSE_HPP__
+#define __MOUSE_HPP__
 
-#ifndef __MYOS__DRIVERS__MOUSE_H
-#define __MYOS__DRIVERS__MOUSE_H
-
-#include <shared/types.hh>
-#include <com/port.hh>
 #include <drivers/driver.hh>
-#include <com/interrupts.hh>
+#include <COM/interrupts.hh>
+#include <COM/port.hh>
+#include <shared/types.hh>
 
-namespace myos
+class MouseEventHandler
 {
-    namespace drivers
-    {
-        class MouseEventHandler
-        {
-        public:
-            MouseEventHandler();
+public:
+  MouseEventHandler();
 
-            virtual void OnActivate();
-            virtual void OnMouseDown(myos::shared::uint8_t button);
-            virtual void OnMouseUp(myos::shared::uint8_t button);
-            virtual void OnMouseMove(int x, int y);
-        };
+public:
+  virtual void on_activate() const;
+  virtual void on_mousedown(u8 button) const;
+  virtual void on_mouseup(u8 button) const;
+  virtual void on_mousemove(i32 x, i32 y) const;
+};
 
-        class MouseDriver : public myos::COM::InterruptHandler, public Driver
-        {
-            myos::COM::Port8Bit dataport;
-            myos::COM::Port8Bit commandport;
-            myos::shared::uint8_t buffer[3];
-            myos::shared::uint8_t offset;
-            myos::shared::uint8_t buttons;
+class MouseDriver
+    : public InterruptHandler,
+      public Driver
+{
+  Port8Bit data_port;
+  Port8Bit command_port;
 
-            MouseEventHandler *handler;
+  u8 buffer[3];
+  u8 offset;
+  u8 buttons;
 
-        public:
-            MouseDriver(myos::COM::InterruptManager *manager, MouseEventHandler *handler);
-            ~MouseDriver();
-            virtual myos::shared::uint32_t HandleInterrupt(myos::shared::uint32_t esp);
-            virtual void Activate();
-        };
-    }
-}
+  MouseEventHandler *handler;
+
+public:
+  MouseDriver(InterruptManager *manager, MouseEventHandler *handler);
+  ~MouseDriver();
+
+public:
+  virtual /* contains static */ const u32 handle_interrupt(const u32 esp);
+  virtual /* contains static */ void activate();
+};
 
 #endif

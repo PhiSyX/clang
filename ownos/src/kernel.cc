@@ -1,42 +1,46 @@
-#include <shared/types.hh>
-#include <gdt.hh>
-#include <memorymanagement.hh>
-#include <COM/interrupts.hh>
-#include <syscalls.hh>
-#include <COM/pci.hh>
-#include <drivers/driver.hh>
-#include <drivers/keyboard.hh>
-#include <drivers/mouse.hh>
-#include <drivers/vga.hh>
-#include <drivers/ata.hh>
-#include <GUI/desktop.hh>
-#include <GUI/window.hh>
-#include <multitasking.hh>
+#include "drivers/AMD/am79c973.hh"
+#include "drivers/ata.hh"
+#include "drivers/driver.hh"
+#include "drivers/keyboard.hh"
+#include "drivers/mouse.hh"
+#include "drivers/vga.hh"
+#include "gdt.hh"
+#include "GUI/desktop.hh"
+#include "GUI/window.hh"
+#include "COM/interrupts.hh"
+#include "COM/pci.hh"
+#include "memory.hh"
+#include "network/arp.hh"
+#include "network/etherframe.hh"
+#include "network/icmp.hh"
+#include "network/ipv4.hh"
+#include "network/tcp.hh"
+#include "network/udp.hh"
+#include "syscalls.hh"
+#include "types.hh"
 
-#include <drivers/amd_am79c973.hh>
-#include <network/etherframe.hh>
-#include <network/arp.hh>
-#include <network/ipv4.hh>
-#include <network/icmp.hh>
-#include <network/udp.hh>
-#include <network/tcp.hh>
-
-// #define GRAPHICSMODE
-
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::drivers;
-using namespace myos::COM;
-using namespace myos::GUI;
-using namespace myos::network;
-
+/// Affiche des informations en console
+///
+/// Du fait que l'on construit notre propre système d'exploitation,
+/// que l'on part de zéro, sans glibc, on ne peut pas utiliser la fonction
+/// printf. On doit donc écrire notre propre fonction printf.
+///
+/// La mémoire vidéo de l'écran texte pour les moniteurs couleurs se trouve à
+/// l'adresse 0xB8000, et pour les moniteurs noir et blanc se trouve à
+/// l'adresse 0xB0000.
 void printf(char *str)
 {
-    static uint16_t *vmem = (uint16_t *)0xb8000;
+    // L'utilisation du mot clé static sur une variable locale change sa durée de
+    // durée automatique à durée statique. Cela signifie que la variable est
+    // maintenant créée au début du programme, et détruite à la fin du programme
+    // (tout comme une variable globale). Par conséquent, la variable statique
+    // conservera sa valeur même après être sortie de sa portée.
+    static u16 *video_memory = (u16 *)0xb8000;
 
-    static uint8_t x = 0, y = 0;
+    static u8 x = 0;
+    static u8 y = 0;
 
-    for (int i = 0; str[i] != '\0'; ++i)
+    for (usize i = 0; str[i] != '\0'; ++i)
     {
         switch (str[i])
         {
@@ -44,8 +48,9 @@ void printf(char *str)
             x = 0;
             y++;
             break;
+
         default:
-            vmem[80 * y + x] = (vmem[80 * y + x] & 0xFF00) | str[i];
+            video_memory[80 * y + x] = (video_memory[80 * y + x] & 0xFF00) | str[i];
             x++;
             break;
         }
@@ -59,15 +64,20 @@ void printf(char *str)
         if (y >= 25)
         {
             for (y = 0; y < 25; y++)
+            {
                 for (x = 0; x < 80; x++)
-                    vmem[80 * y + x] = (vmem[80 * y + x] & 0xFF00) | ' ';
+                {
+                    video_memory[80 * y + x] = (video_memory[80 * y + x] & 0xFF00) | ' ';
+                }
+            }
+
             x = 0;
             y = 0;
         }
     }
 }
 
-void printfHex(uint8_t key)
+void printh(u8 key)
 {
     char *foo = "00";
     char *hex = "0123456789ABCDEF";
@@ -75,67 +85,36 @@ void printfHex(uint8_t key)
     foo[1] = hex[key & 0xF];
     printf(foo);
 }
-void printfHex16(uint16_t key)
+
+void printh16(u16 key)
 {
-    printfHex((key >> 8) & 0xFF);
-    printfHex(key & 0xFF);
+    printh((key >> 8) & 0xFF);
+    printh(key & 0xFF);
 }
-void printfHex32(uint32_t key)
+
+void printh32(u32 key)
 {
-    printfHex((key >> 24) & 0xFF);
-    printfHex((key >> 16) & 0xFF);
-    printfHex((key >> 8) & 0xFF);
-    printfHex(key & 0xFF);
+    printh((key >> 24) & 0xFF);
+    printh((key >> 16) & 0xFF);
+    printh((key >> 8) & 0xFF);
+    printh(key & 0xFF);
 }
 
 class PrintfKeyboardEventHandler : public KeyboardEventHandler
 {
 public:
-    void OnKeyDown(char c)
+    void on_keydown(char ch)
     {
         char *foo = " ";
-        foo[0] = c;
+        foo[0] = ch;
         printf(foo);
     }
 };
 
-class MouseToConsole : public MouseEventHandler
-{
-    int8_t x, y;
-
-public:
-    MouseToConsole()
-    {
-        uint16_t *vmem = (uint16_t *)0xb8000;
-        x = 40;
-        y = 12;
-        vmem[80 * y + x] = (vmem[80 * y + x] & 0x0F00) << 4 | (vmem[80 * y + x] & 0xF000) >> 4 | (vmem[80 * y + x] & 0x00FF);
-    }
-
-    virtual void OnMouseMove(int xoffset, int yoffset)
-    {
-        static uint16_t *vmem = (uint16_t *)0xb8000;
-        vmem[80 * y + x] = (vmem[80 * y + x] & 0x0F00) << 4 | (vmem[80 * y + x] & 0xF000) >> 4 | (vmem[80 * y + x] & 0x00FF);
-
-        x += xoffset;
-        if (x >= 80)
-            x = 79;
-        if (x < 0)
-            x = 0;
-        y += yoffset;
-        if (y >= 25)
-            y = 24;
-        if (y < 0)
-            y = 0;
-
-        vmem[80 * y + x] = (vmem[80 * y + x] & 0x0F00) << 4 | (vmem[80 * y + x] & 0xF000) >> 4 | (vmem[80 * y + x] & 0x00FF);
-    }
-};
-
-class PrintfUDPHandler : public UserDatagramProtocolHandler
+class PrintfUDPHandler : public UDPHandler
 {
 public:
-    void HandleUserDatagramProtocolMessage(UserDatagramProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size)
+    void handle_udp_message(UDPSocket *socket, u8 *data, u16 size)
     {
         char *foo = " ";
         for (int i = 0; i < size; i++)
@@ -146,202 +125,272 @@ public:
     }
 };
 
-class PrintfTCPHandler : public TransmissionControlProtocolHandler
+class PrintfTCPHandler : public TCPHandler
 {
 public:
-    bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size)
+    const bool handle_tcp_message(TCPSocket *socket, u8 *data, u16 size) const
     {
         char *foo = " ";
+
         for (int i = 0; i < size; i++)
         {
             foo[0] = data[i];
             printf(foo);
-        }
-
-        if (size > 9 && data[0] == 'G' && data[1] == 'E' && data[2] == 'T' && data[3] == ' ' && data[4] == '/' && data[5] == ' ' && data[6] == 'H' && data[7] == 'T' && data[8] == 'T' && data[9] == 'P')
-        {
-            socket->Send((uint8_t *)"HTTP/1.1 200 OK\r\nServer: MyOS\r\nContent-Type: text/html\r\n\r\n<html><head><title>My Operating System</title></head><body><b>My Operating System</b> http://www.AlgorithMan.de</body></html>\r\n", 184);
-            socket->Disconnect();
         }
 
         return true;
     }
 };
 
-void sysprintf(char *str)
+class MouseToConsole : public MouseEventHandler
+{
+    i8 x, y;
+
+public:
+    MouseToConsole() {}
+
+    virtual void on_activate()
+    {
+        u16 *video_memory = (u16 *)0xb8000;
+        x = 40;
+        y = 12;
+        video_memory[80 * y + x] = (video_memory[80 * y + x] & 0x0F00) << 4 |
+                                   (video_memory[80 * y + x] & 0xF000) >> 4 |
+                                   (video_memory[80 * y + x] & 0x00FF);
+    }
+
+    virtual void on_mousemove(i32 offset_x, i32 offset_y)
+    {
+        static u16 *video_memory = (u16 *)0xb8000;
+        video_memory[80 * y + x] = (video_memory[80 * y + x] & 0x0F00) << 4 |
+                                   (video_memory[80 * y + x] & 0xF000) >> 4 |
+                                   (video_memory[80 * y + x] & 0x00FF);
+
+        x += offset_x;
+        if (x >= 80)
+        {
+            x = 79;
+        }
+        if (x < 0)
+        {
+            x = 0;
+        }
+
+        y += offset_y;
+        if (y >= 25)
+        {
+            y = 24;
+        }
+        if (y < 0)
+        {
+            y = 0;
+        }
+
+        video_memory[80 * y + x] = (video_memory[80 * y + x] & 0x0F00) << 4 |
+                                   (video_memory[80 * y + x] & 0xF000) >> 4 |
+                                   (video_memory[80 * y + x] & 0x00FF);
+    }
+};
+
+/// Défini un constructeur comme un pointeur vers une fonction
+typedef void (*constructor)();
+/// `start_ctors` est une variable de type `constructor` (pointeur vers une
+/// fonction)
+extern "C" constructor start_ctors;
+/// `end_ctors` est une variable de type `constructor` (pointeur vers une
+/// fonction)
+extern "C" constructor end_ctors;
+
+extern "C" void
+call_ctors()
+{
+    /// i pointe d'abord sur le premier pointeur vers un élément de fonction
+    /// (start_ctors) dans le tableau de pointeurs vers les fonctions
+    /// (.init_array).
+    for (constructor *i = &start_ctors; i != &end_ctors; i++)
+    {
+        (*i)(); // déréférencée, la fonction est appelée
+    }
+}
+
+const void
+sysprintf(char *str)
 {
     asm("int $0x80" : : "a"(4), "b"(str));
 }
 
-void taskA()
+const void
+taskA()
 {
-    while (true)
+    while (1)
+    {
         sysprintf("A");
+    }
 }
 
-void taskB()
+const void
+taskB()
 {
-    while (true)
+    while (1)
+    {
         sysprintf("B");
+    }
 }
 
-typedef void (*constructor)();
-extern "C" constructor start_ctors;
-extern "C" constructor end_ctors;
-extern "C" void callConstructors()
+/// Fonction de démarrage
+///
+/// multiboot_struct et multiboot_magic sont transmis par le bootloader.
+///
+/// Le compilateur G++ modifie le nom de la fonction kernel_main lorsqu'il
+/// compile. On utilise extern "C" pour empêcher ça.
+extern "C" void
+kernel_main(void *multiboot_struct, u32 magicnumber)
 {
-    for (constructor *i = &start_ctors; i != &end_ctors; i++)
-        (*i)();
-}
-
-extern "C" void kernelMain(const void *multiboot_structure, uint32_t /*multiboot_magic*/)
-{
-    printf("Hello World!\n");
+    printf("Demarrage du kernel!\n");
 
     GlobalDescriptorTable gdt;
 
-    uint32_t *memupper = (uint32_t *)(((size_t)multiboot_structure) + 8);
-    size_t heap = 10 * 1024 * 1024;
-    MemoryManager memoryManager(heap, (*memupper) * 1024 - heap - 10 * 1024);
+    u32 *memupper = (u32 *)(((usize)multiboot_struct) + 8);
+    usize heap = 10 * 1024 * 1024;
+
+    MemoryManager memory_manager(heap, (*memupper) * 1024 - heap - 10 * 1024);
 
     printf("heap: 0x");
-    printfHex((heap >> 24) & 0xFF);
-    printfHex((heap >> 16) & 0xFF);
-    printfHex((heap >> 8) & 0xFF);
-    printfHex((heap) & 0xFF);
+    printh((heap >> 24) & 0xFF);
+    printh((heap >> 16) & 0xFF);
+    printh((heap >> 8) & 0xFF);
+    printh((heap) & 0xFF);
 
-    void *allocated = memoryManager.malloc(1024);
+    void *allocated = memory_manager.malloc(1024);
     printf("\nallocated: 0x");
-    printfHex(((size_t)allocated >> 24) & 0xFF);
-    printfHex(((size_t)allocated >> 16) & 0xFF);
-    printfHex(((size_t)allocated >> 8) & 0xFF);
-    printfHex(((size_t)allocated) & 0xFF);
+    printh(((usize)allocated >> 24) & 0xFF);
+    printh(((usize)allocated >> 16) & 0xFF);
+    printh(((usize)allocated >> 8) & 0xFF);
+    printh(((usize)allocated) & 0xFF);
     printf("\n");
 
-    TaskManager taskManager;
-    /*
+    TaskManager task_manager;
+
     Task task1(&gdt, taskA);
     Task task2(&gdt, taskB);
-    taskManager.AddTask(&task1);
-    taskManager.AddTask(&task2);
-    */
+    task_manager.add(&task1);
+    task_manager.add(&task2);
 
-    InterruptManager interrupts(0x20, &gdt, &taskManager);
+    InterruptManager interrupts(0x20, &gdt, &task_manager);
     SyscallHandler syscalls(&interrupts, 0x80);
 
-    printf("Initializing Hardware, Stage 1\n");
+    printf("Initialisation du materiel\n");
 
-#ifdef GRAPHICSMODE
+#ifdef GRAPHICS_MODE
+    printf("Mode: Graphique\n");
     Desktop desktop(320, 200, 0x00, 0x00, 0xA8);
+#else
+    printf("Mode: Normal\n");
 #endif
 
-    DriverManager drvManager;
+    const DriverManager driver_manager;
 
-#ifdef GRAPHICSMODE
+#ifdef GRAPHICS_MODE
     KeyboardDriver keyboard(&interrupts, &desktop);
 #else
-    PrintfKeyboardEventHandler kbhandler;
-    KeyboardDriver keyboard(&interrupts, &kbhandler);
+    PrintfKeyboardEventHandler keyboard_handler;
+    KeyboardDriver keyboard(&interrupts, &keyboard_handler);
 #endif
-    drvManager.AddDriver(&keyboard);
+    driver_manager.add(&keyboard);
 
-#ifdef GRAPHICSMODE
+#ifdef GRAPHICS_MODE
     MouseDriver mouse(&interrupts, &desktop);
 #else
-    MouseToConsole mousehandler;
-    MouseDriver mouse(&interrupts, &mousehandler);
+    MouseToConsole mouse_handler;
+    MouseDriver mouse(&interrupts, &mouse_handler);
 #endif
-    drvManager.AddDriver(&mouse);
+    driver_manager.add(&mouse);
 
-    PeripheralComponentInterconnectController PCIController;
-    PCIController.SelectDrivers(&drvManager, &interrupts);
+    PCIController PCIController;
+    PCIController.select_drivers(&driver_manager, &interrupts);
 
-#ifdef GRAPHICSMODE
-    VideoGraphicsArray vga;
+#ifdef GRAPHICS_MODE
+    VGA vga;
 #endif
 
-    printf("Initializing Hardware, Stage 2\n");
-    drvManager.ActivateAll();
+    driver_manager.enable_all();
 
-    printf("Initializing Hardware, Stage 3\n");
-
-#ifdef GRAPHICSMODE
-    vga.SetMode(320, 200, 8);
+#ifdef GRAPHICS_MODE
+    vga.set_mode(320, 200, 8);
     Window win1(&desktop, 10, 10, 20, 20, 0xA8, 0x00, 0x00);
-    desktop.AddChild(&win1);
+    desktop.add_child(&win1);
     Window win2(&desktop, 40, 15, 30, 30, 0x00, 0xA8, 0x00);
-    desktop.AddChild(&win2);
+    desktop.add_child(&win2);
 #endif
 
     /*
-    printf("\nS-ATA primary master: ");
-    AdvancedTechnologyAttachment ata0m(true, 0x1F0);
-    ata0m.Identify();
+      printf("\nS-ATA primary master: ");
+      ATA ata0m(true, 0x1F0);
+      ata0m.identify();
 
-    printf("\nS-ATA primary slave: ");
-    AdvancedTechnologyAttachment ata0s(false, 0x1F0);
-    ata0s.Identify();
-    ata0s.Write28(0, (uint8_t *)"hello, world!", 13);
-    ata0s.Flush();
-    ata0s.Read28(0, 13);
+      printf("\nS-ATA primary slave: ");
+      ATA ata0s(false, 0x1F0);
+      ata0s.identify();
+      ata0s.write_28(0, (u8*)"S-ATA Primary Slave", 19);
+      ata0s.flush();
+      ata0s.read_28(0, 25);
 
-    printf("\nS-ATA secondary master: ");
-    AdvancedTechnologyAttachment ata1m(true, 0x170);
-    ata1m.Identify();
+      printf("\nS-ATA secondary master: ");
+      ATA ata1m(true, 0x170);
+      ata1m.identify();
 
-    printf("\nS-ATA secondary slave: ");
-    AdvancedTechnologyAttachment ata1s(false, 0x170);
-    ata1s.Identify();
-
-    // third: 0x1E8
-    // fourth: 0x168
+      printf("\nS-ATA secondary slave: ");
+      ATA ata1s(false, 0x170);
+      ata1s.identify();
     */
 
-    amd_am79c973 *eth0 = (amd_am79c973 *)(drvManager.drivers[2]);
+    amd_am79c973 *eth0 = (amd_am79c973 *)(driver_manager.drivers[2]);
 
-    // IP Address
-    uint8_t ip1 = 10, ip2 = 0, ip3 = 2, ip4 = 15;
-    uint32_t ip_be = ((uint32_t)ip4 << 24) | ((uint32_t)ip3 << 16) | ((uint32_t)ip2 << 8) | (uint32_t)ip1;
-    eth0->SetIPAddress(ip_be);
+    // IP 10.0.2.15
+    u8 ip1 = 10, ip2 = 0, ip3 = 2, ip4 = 15;
+    u32 ip_be = ((u32)ip4 << 24) | ((u32)ip3 << 16) | ((u32)ip2 << 8) | (u32)ip1;
+    eth0->set_ip_address(ip_be);
     EtherFrameProvider etherframe(eth0);
-    AddressResolutionProtocol arp(&etherframe);
+    ARP arp(&etherframe);
 
-    // IP Address of the default gateway
-    uint8_t gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
-    uint32_t gip_be = ((uint32_t)gip4 << 24) | ((uint32_t)gip3 << 16) | ((uint32_t)gip2 << 8) | (uint32_t)gip1;
+    // IP 10.0.2.2
+    u8 gip1 = 10, gip2 = 0, gip3 = 2, gip4 = 2;
+    u32 gip_be =
+        ((u32)gip4 << 24) | ((u32)gip3 << 16) | ((u32)gip2 << 8) | (u32)gip1;
 
-    uint8_t subnet1 = 255, subnet2 = 255, subnet3 = 255, subnet4 = 0;
-    uint32_t subnet_be = ((uint32_t)subnet4 << 24) | ((uint32_t)subnet3 << 16) | ((uint32_t)subnet2 << 8) | (uint32_t)subnet1;
+    // IP 255.255.255.0
+    u8 subnet1 = 255, subnet2 = 255, subnet3 = 255, subnet4 = 0;
+    u32 subnet_be = ((u32)subnet4 << 24) | ((u32)subnet3 << 16) |
+                    ((u32)subnet2 << 8) | (u32)subnet1;
+    IPProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
+    ICMP icmp(&ipv4);
+    UDPProvider udp(&ipv4);
+    TCPProvider tcp(&ipv4);
 
-    InternetProtocolProvider ipv4(&etherframe, &arp, gip_be, subnet_be);
-    InternetControlMessageProtocol icmp(&ipv4);
-    UserDatagramProtocolProvider udp(&ipv4);
-    TransmissionControlProtocolProvider tcp(&ipv4);
+    // etherframe.send(0xFFFFFFFFFFFF, 0x0608, (u8*)"Hello World", 13);
 
-    interrupts.Activate();
+    interrupts.activate();
 
-    printf("\n\n\n\n");
+    printf("\n\n\n\n\n\n\n\n");
 
-    arp.BroadcastMACAddress(gip_be);
+    arp.broadcast_mac_address(gip_be);
+    // icmp.request_echo_reply(gip_be);
 
-    PrintfTCPHandler tcphandler;
-    TransmissionControlProtocolSocket *tcpsocket = tcp.Listen(1234);
-    tcp.Bind(tcpsocket, &tcphandler);
-    // tcpsocket->Send((uint8_t*)"Hello TCP!", 10);
+    tcp.connect(gip_be, 1234);
+    PrintfTCPHandler tcp_handler;
+    TCPSocket *tcpsocket = tcp.connect(gip_be, 1234);
+    tcp.bind(tcpsocket, &tcp_handler);
+    tcpsocket->send((u8 *)"Hello World! (TCP)", 18);
 
-    // icmp.RequestEchoReply(gip_be);
-
-    // PrintfUDPHandler udphandler;
-    // UserDatagramProtocolSocket* udpsocket = udp.Connect(gip_be, 1234);
-    // udp.Bind(udpsocket, &udphandler);
-    // udpsocket->Send((uint8_t*)"Hello UDP!", 10);
-    // UserDatagramProtocolSocket *udpsocket = udp.Listen(1234);
-    // udp.Bind(udpsocket, &udphandler);
+    // PrintfUDPHandler udp_handler;
+    // UDPSocket* udp_socket = udp.listen(1234);
+    // udp.bind(udp_socket, &udp_handler);
+    // udp_socket->send((u8*)"Hello World! (UDP)", 18);
 
     while (1)
     {
-#ifdef GRAPHICSMODE
-        desktop.Draw(&vga);
+#ifdef GRAPHICS_MODE
+        desktop.draw(&vga);
 #endif
     }
 }

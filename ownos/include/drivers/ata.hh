@@ -1,38 +1,41 @@
-#ifndef __MYOS__DRIVERS__ATA_H
-#define __MYOS__DRIVERS__ATA_H
+#ifndef __ATA_HPP__
+#define __ATA_HPP__
 
-#include <shared/types.hh>
 #include <COM/interrupts.hh>
 #include <COM/port.hh>
+#include <shared/types.hh>
 
-namespace myos
+void printf(char *str);
+void printh(u8);
+
+// Advanced Technology Attachment
+class ATA
 {
-    namespace drivers
-    {
-        class AdvancedTechnologyAttachment
-        {
-        protected:
-            bool master;
-            COM::Port16Bit dataPort;
-            COM::Port8Bit errorPort;
-            COM::Port8Bit sectorCountPort;
-            COM::Port8Bit lbaLowPort;
-            COM::Port8Bit lbaMidPort;
-            COM::Port8Bit lbaHiPort;
-            COM::Port8Bit devicePort;
-            COM::Port8Bit commandPort;
-            COM::Port8Bit controlPort;
+protected:
+  bool master;
 
-        public:
-            AdvancedTechnologyAttachment(bool master, shared::uint16_t portBase);
-            ~AdvancedTechnologyAttachment();
+  Port16Bit data_port;
+  Port8Bit error_port;
+  Port8Bit sector_count_port;
+  Port8Bit lba_low_port;
+  Port8Bit lba_mid_port;
+  Port8Bit lba_hi_port;
+  Port8Bit device_port;
+  Port8Bit command_port;
+  Port8Bit control_port;
 
-            void Identify();
-            void Read28(shared::uint32_t sectorNum, int count = 512);
-            void Write28(shared::uint32_t sectorNum, shared::uint8_t *data, shared::uint32_t count);
-            void Flush();
-        };
-    }
-}
+public:
+  ATA(const bool master, const u16 port_base);
+  ~ATA();
+
+public:
+  /* contains static */ void identify();
+  /* contains static */ void read_28(const u32 sector_num,
+                                     const i32 count = 512);
+  /* contains static */ void write_28(const u32 sector_num,
+                                      const u8 *data,
+                                      const u32 count);
+  /* contains static */ void flush();
+};
 
 #endif

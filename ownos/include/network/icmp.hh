@@ -1,34 +1,33 @@
-#ifndef __MYOS__NETWORK__ICMP_H
-#define __MYOS__NETWORK__ICMP_H
+#ifndef __ICMP_HPP__
+#define __ICMP_HPP__
 
-#include <shared/types.hh>
 #include <network/ipv4.hh>
+#include <types.hh>
 
-namespace myos
+void printf(char *);
+void printh(u8);
+
+// Internet Control Message Protocol
+struct ICMPMessage
 {
-    namespace network
-    {
-        struct InternetControlMessageProtocolMessage
-        {
-            shared::uint8_t type;
-            shared::uint8_t code;
+    u8 type;
+    u8 code;
+    u16 checksum;
+    u32 data;
+} __attribute__((packed));
 
-            shared::uint16_t checksum;
-            shared::uint32_t data;
+class ICMP : IPHandler
+{
+public:
+    ICMP(IPProvider *backend);
+    ~ICMP();
 
-        } __attribute__((packed));
-
-        class InternetControlMessageProtocol : InternetProtocolHandler
-        {
-        public:
-            InternetControlMessageProtocol(InternetProtocolProvider *backend);
-            ~InternetControlMessageProtocol();
-
-            bool OnInternetProtocolReceived(shared::uint32_t srcIP_BE, shared::uint32_t dstIP_BE,
-                                            shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
-            void RequestEchoReply(shared::uint32_t ip_be);
-        };
-    }
-}
+public:
+    const bool on_ip_recv(const u32 src_ip_be,
+                          const u32 dst_ip_be,
+                          const u8 *ip_payload,
+                          const u32 size) const;
+    void request_echo_reply(const u32 ip_be);
+};
 
 #endif

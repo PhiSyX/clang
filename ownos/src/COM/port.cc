@@ -1,84 +1,72 @@
-#include <COM/port.hh>
+#include "COM/port.hh"
 
-using namespace myos::shared;
-using namespace myos::COM;
-
-Port::Port(uint16_t portnumber)
+Port::Port(const u16 $port_number)
 {
-    this->portnumber = portnumber;
+    port_number = $port_number;
 }
 
-Port::~Port()
-{
-}
+Port::~Port() {}
 
-Port8Bit::Port8Bit(uint16_t portnumber)
-    : Port(portnumber)
+Port8Bit::Port8Bit(const u16 port_number)
+    : Port(port_number)
 {
 }
 
-Port8Bit::~Port8Bit()
+Port8Bit::~Port8Bit() {}
+
+void Port8Bit::write(const u8 data)
+{
+    write_8(port_number, data);
+}
+
+u8 Port8Bit::read()
+{
+    return read_8(port_number);
+}
+
+Port8BitSlow::Port8BitSlow(const u16 port_number)
+    : Port8Bit(port_number)
 {
 }
 
-void Port8Bit::Write(uint8_t data)
+Port8BitSlow::~Port8BitSlow() {}
+
+void Port8BitSlow::write(const u8 data)
 {
-    Write8(portnumber, data);
+    write8_slow(port_number, data);
 }
 
-uint8_t Port8Bit::Read()
-{
-    return Read8(portnumber);
-}
-
-Port8BitSlow::Port8BitSlow(uint16_t portnumber)
-    : Port8Bit(portnumber)
+Port16Bit::Port16Bit(const u16 port_number)
+    : Port(port_number)
 {
 }
 
-Port8BitSlow::~Port8BitSlow()
+Port16Bit::~Port16Bit() {}
+
+void Port16Bit::write(const u16 data)
+{
+    write_16(port_number, data);
+}
+
+const u16
+Port16Bit::read()
+{
+    return read_16(port_number);
+}
+
+Port32Bit::Port32Bit(const u16 port_number)
+    : Port(port_number)
 {
 }
 
-void Port8BitSlow::Write(uint8_t data)
+Port32Bit::~Port32Bit() {}
+
+void Port32Bit::write(const u32 data)
 {
-    Write8Slow(portnumber, data);
+    write_32(port_number, data);
 }
 
-Port16Bit::Port16Bit(uint16_t portnumber)
-    : Port(portnumber)
+u32 Port32Bit::read()
 {
-}
-
-Port16Bit::~Port16Bit()
-{
-}
-
-void Port16Bit::Write(uint16_t data)
-{
-    Write16(portnumber, data);
-}
-
-uint16_t Port16Bit::Read()
-{
-    return Read16(portnumber);
-}
-
-Port32Bit::Port32Bit(uint16_t portnumber)
-    : Port(portnumber)
-{
-}
-
-Port32Bit::~Port32Bit()
-{
-}
-
-void Port32Bit::Write(uint32_t data)
-{
-    Write32(portnumber, data);
-}
-
-uint32_t Port32Bit::Read()
-{
-    return Read32(portnumber);
+    return read_32(port_number);
 }

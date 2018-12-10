@@ -1,130 +1,162 @@
-#include <network/ipv4.hh>
+#include "network/ipv4.hh"
+#include "memory.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::network;
-
-InternetProtocolHandler::InternetProtocolHandler(InternetProtocolProvider *backend, uint8_t protocol)
+IPHandler::IPHandler(IPProvider *$backend, const u8 $protocol)
 {
-    this->backend = backend;
-    this->ip_protocol = protocol;
-    backend->handlers[protocol] = this;
+    backend = $backend;
+    ip_protocol = $protocol;
+    $backend->handlers[$protocol] = this;
 }
 
-InternetProtocolHandler::~InternetProtocolHandler()
+IPHandler::~IPHandler()
 {
     if (backend->handlers[ip_protocol] == this)
+    {
         backend->handlers[ip_protocol] = 0;
+    }
 }
 
-bool InternetProtocolHandler::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE,
-                                                         uint8_t *internetprotocolPayload, uint32_t size)
+const bool
+IPHandler::on_ip_recv(const u32 src_ip_be,
+                      const u32 dst_ip_be,
+                      const u8 *ip_payload,
+                      const u32 size) const
 {
     return false;
 }
 
-void InternetProtocolHandler::Send(uint32_t dstIP_BE, uint8_t *internetprotocolPayload, uint32_t size)
+void IPHandler::send(const u32 dst_ip_be, const u8 *ip_payload, const u32 size)
 {
-    backend->Send(dstIP_BE, ip_protocol, internetprotocolPayload, size);
+    backend->send(dst_ip_be, ip_protocol, ip_payload, size);
 }
 
-InternetProtocolProvider::InternetProtocolProvider(EtherFrameProvider *backend,
-                                                   AddressResolutionProtocol *arp,
-                                                   uint32_t gatewayIP, uint32_t subnetMask)
+IPProvider::IPProvider(EtherFrameProvider *backend,
+                       ARP *$arp,
+                       u32 $gateway_ip,
+                       u32 $subnet_mask)
     : EtherFrameHandler(backend, 0x800)
 {
-    for (int i = 0; i < 255; i++)
+    for (i32 i = 0; i < 255; i++)
+    {
         handlers[i] = 0;
-    this->arp = arp;
-    this->gatewayIP = gatewayIP;
-    this->subnetMask = subnetMask;
+    }
+    arp = $arp;
+    gateway_ip = $gateway_ip;
+    subnet_mask = $subnet_mask;
 }
 
-InternetProtocolProvider::~InternetProtocolProvider()
-{
-}
+IPProvider::~IPProvider() {}
 
-bool InternetProtocolProvider::OnEtherFrameReceived(uint8_t *etherframePayload, uint32_t size)
+const bool
+IPProvider::on_etherframe_recv(const u8 *etherframe_payload,
+                               const u32 size) const
 {
-    if (size < sizeof(InternetProtocolV4Message))
+    if (size < sizeof(IPV4Message))
+    {
         return false;
+    }
 
-    InternetProtocolV4Message *ipmessage = (InternetProtocolV4Message *)etherframePayload;
-    bool sendBack = false;
+    IPV4Message *ip_message = (IPV4Message *)etherframe_payload;
+    bool send_back = false;
 
-    if (ipmessage->dstIP == backend->GetIPAddress())
+    if (ip_message->dst_ip == backend->get_ip_address())
     {
-        int length = ipmessage->totalLength;
+        i32 length = ip_message->total_length;
         if (length > size)
+        {
             length = size;
+        }
 
-        if (handlers[ipmessage->protocol] != 0)
-            sendBack = handlers[ipmessage->protocol]->OnInternetProtocolReceived(
-                ipmessage->srcIP, ipmessage->dstIP,
-                etherframePayload + 4 * ipmessage->headerLength, length - 4 * ipmessage->headerLength);
+        if (handlers[ip_message->protocol] != 0)
+        {
+            send_back = handlers[ip_message->protocol]->on_ip_recv(
+                ip_message->src_ip,
+                ip_message->dst_ip,
+                etherframe_payload + 4 * ip_message->header_length,
+                length - 4 * ip_message->header_length);
+        }
     }
 
-    if (sendBack)
+    if (send_back)
     {
-        uint32_t temp = ipmessage->dstIP;
-        ipmessage->dstIP = ipmessage->srcIP;
-        ipmessage->srcIP = temp;
+        u32 temp = ip_message->dst_ip;
+        ip_message->dst_ip = ip_message->src_ip;
+        ip_message->src_ip = temp;
 
-        ipmessage->timeToLive = 0x40;
-        ipmessage->checksum = 0;
-        ipmessage->checksum = Checksum((uint16_t *)ipmessage, 4 * ipmessage->headerLength);
+        ip_message->time_to_live = 0x40;
+        ip_message->checksum = 0;
+        ip_message->checksum =
+            checksum((u16 *)ip_message, 4 * ip_message->header_length);
     }
 
-    return sendBack;
+    return send_back;
 }
 
-void InternetProtocolProvider::Send(uint32_t dstIP_BE, uint8_t protocol, uint8_t *data, uint32_t size)
+void IPProvider::send(const u32 dst_ip_be,
+                      const u8 protocol,
+                      const u8 *data,
+                      const u32 size)
 {
-
-    uint8_t *buffer = (uint8_t *)MemoryManager::activeMemoryManager->malloc(sizeof(InternetProtocolV4Message) + size);
-    InternetProtocolV4Message *message = (InternetProtocolV4Message *)buffer;
+    u8 *buffer = (u8 *)MemoryManager::active_memory_manager->malloc(
+        sizeof(IPV4Message) + size);
+    IPV4Message *message = (IPV4Message *)buffer;
 
     message->version = 4;
-    message->headerLength = sizeof(InternetProtocolV4Message) / 4;
+    message->header_length = sizeof(IPV4Message) / 4;
     message->tos = 0;
-    message->totalLength = size + sizeof(InternetProtocolV4Message);
-    message->totalLength = ((message->totalLength & 0xFF00) >> 8) | ((message->totalLength & 0x00FF) << 8);
+    message->total_length = size + sizeof(IPV4Message);
+    message->total_length = ((message->total_length & 0xFF00) >> 8) |
+                            ((message->total_length & 0x00FF) << 8);
     message->ident = 0x0100;
-    message->flagsAndOffset = 0x0040;
-    message->timeToLive = 0x40;
+    message->flags_and_offset = 0x0040;
+    message->time_to_live = 0x40;
     message->protocol = protocol;
 
-    message->dstIP = dstIP_BE;
-    message->srcIP = backend->GetIPAddress();
+    message->dst_ip = dst_ip_be;
+    message->src_ip = backend->get_ip_address();
 
     message->checksum = 0;
-    message->checksum = Checksum((uint16_t *)message, sizeof(InternetProtocolV4Message));
+    message->checksum = checksum((u16 *)message, sizeof(IPV4Message));
 
-    uint8_t *databuffer = buffer + sizeof(InternetProtocolV4Message);
-    for (int i = 0; i < size; i++)
+    u8 *databuffer = buffer + sizeof(IPV4Message);
+    for (i32 i = 0; i < size; i++)
+    {
         databuffer[i] = data[i];
+    }
 
-    uint32_t route = dstIP_BE;
-    if ((dstIP_BE & subnetMask) != (message->srcIP & subnetMask))
-        route = gatewayIP;
+    u32 route = dst_ip_be;
+    if ((dst_ip_be & subnet_mask) != (message->src_ip & subnet_mask))
+    {
+        route = gateway_ip;
+    }
 
-    backend->Send(arp->Resolve(route), this->etherType_BE, buffer, sizeof(InternetProtocolV4Message) + size);
+    backend->send(arp->resolve(route),
+                  this->ether_type_be,
+                  buffer,
+                  sizeof(IPV4Message) + size);
 
-    MemoryManager::activeMemoryManager->free(buffer);
+    MemoryManager::active_memory_manager->free(buffer);
 }
 
-uint16_t InternetProtocolProvider::Checksum(uint16_t *data, uint32_t lengthInBytes)
+/*static*/ u16
+IPProvider::checksum(const u16 *data, const u32 length_in_bytes)
 {
-    uint32_t temp = 0;
+    u32 temp = 0;
 
-    for (int i = 0; i < lengthInBytes / 2; i++)
+    for (i32 i = 0; i < length_in_bytes / 2; i++)
+    {
         temp += ((data[i] & 0xFF00) >> 8) | ((data[i] & 0x00FF) << 8);
+    }
 
-    if (lengthInBytes % 2)
-        temp += ((uint16_t)((char *)data)[lengthInBytes - 1]) << 8;
+    if (length_in_bytes % 2)
+    {
+        temp += ((u16)((char *)data)[length_in_bytes - 1]) << 8;
+    }
 
     while (temp & 0xFFFF0000)
+    {
         temp = (temp & 0xFFFF) + (temp >> 16);
+    }
 
     return ((~temp & 0xFF00) >> 8) | ((~temp & 0x00FF) << 8);
 }

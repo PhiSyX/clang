@@ -1,31 +1,29 @@
-#ifndef __MYOS__GUI__DESKTOP_H
-#define __MYOS__GUI__DESKTOP_H
+#ifndef __DESKTOP_HPP__
+#define __DESKTOP_HPP__
 
-#include <GUI/widget.hh>
 #include <drivers/mouse.hh>
+#include <drivers/vga.hh>
+#include <GUI/widget.hh>
+#include <shared/types.hh>
 
-namespace myos
+class Desktop
+    : public CompositeWidget,
+      public MouseEventHandler
 {
-    namespace GUI
-    {
-        class Desktop : public CompositeWidget, public myos::drivers::MouseEventHandler
-        {
-        protected:
-            shared::uint32_t MouseX;
-            shared::uint32_t MouseY;
+protected:
+  u32 mousex;
+  u32 mousey;
 
-        public:
-            Desktop(shared::int32_t w, shared::int32_t h,
-                    shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
-            ~Desktop();
+public:
+  Desktop(const i32 w, const i32 h, const u8 r, const u8 g, const u8 b);
+  ~Desktop();
 
-            void Draw(shared::GraphicsContext *gc);
+public:
+  void draw(VGA *gc);
 
-            void OnMouseDown(myos::shared::uint8_t button);
-            void OnMouseUp(myos::shared::uint8_t button);
-            void OnMouseMove(int x, int y);
-        };
-    }
-}
+  void on_mousedown(const u8 button);
+  void on_mouseup(const u8 button);
+  void on_mousemove(i32 x, i32 y);
+};
 
 #endif

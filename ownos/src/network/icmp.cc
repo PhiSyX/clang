@@ -1,63 +1,56 @@
-#include <network/icmp.hh>
+#include "network/icmp.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::network;
-
-InternetControlMessageProtocol::InternetControlMessageProtocol(InternetProtocolProvider *backend)
-    : InternetProtocolHandler(backend, 0x01)
+ICMP::ICMP(IPProvider *backend)
+    : IPHandler(backend, 0x01)
 {
 }
 
-InternetControlMessageProtocol::~InternetControlMessageProtocol()
-{
-}
+ICMP::~ICMP() {}
 
-void printf(char *);
-void printfHex(uint8_t);
-bool InternetControlMessageProtocol::OnInternetProtocolReceived(uint32_t srcIP_BE, uint32_t dstIP_BE,
-                                                                uint8_t *internetprotocolPayload, uint32_t size)
+const bool
+ICMP::on_ip_recv(const u32 src_ip_be,
+                 const u32 dst_ip_be,
+                 const u8 *ip_payload,
+                 const u32 size) const
 {
-    if (size < sizeof(InternetControlMessageProtocolMessage))
+    if (size < sizeof(ICMPMessage))
+    {
         return false;
+    }
 
-    InternetControlMessageProtocolMessage *msg = (InternetControlMessageProtocolMessage *)internetprotocolPayload;
+    ICMPMessage *msg = (ICMPMessage *)ip_payload;
 
     switch (msg->type)
     {
-
     case 0:
         printf("ping response from ");
-        printfHex(srcIP_BE & 0xFF);
+        printh(src_ip_be & 0xFF);
         printf(".");
-        printfHex((srcIP_BE >> 8) & 0xFF);
+        printh((src_ip_be >> 8) & 0xFF);
         printf(".");
-        printfHex((srcIP_BE >> 16) & 0xFF);
+        printh((src_ip_be >> 16) & 0xFF);
         printf(".");
-        printfHex((srcIP_BE >> 24) & 0xFF);
+        printh((src_ip_be >> 24) & 0xFF);
         printf("\n");
         break;
 
     case 8:
         msg->type = 0;
         msg->checksum = 0;
-        msg->checksum = InternetProtocolProvider::Checksum((uint16_t *)msg,
-                                                           sizeof(InternetControlMessageProtocolMessage));
+        msg->checksum = IPProvider::checksum((u16 *)msg, sizeof(ICMPMessage));
         return true;
     }
 
     return false;
 }
 
-void InternetControlMessageProtocol::RequestEchoReply(uint32_t ip_be)
+void ICMP::request_echo_reply(const u32 ip_be)
 {
-    InternetControlMessageProtocolMessage icmp;
-    icmp.type = 8; // ping
+    ICMPMessage icmp;
+    icmp.type = 8;
     icmp.code = 0;
-    icmp.data = 0x3713; // 1337
+    icmp.data = 0x3713;
     icmp.checksum = 0;
-    icmp.checksum = InternetProtocolProvider::Checksum((uint16_t *)&icmp,
-                                                       sizeof(InternetControlMessageProtocolMessage));
-
-    InternetProtocolHandler::Send(ip_be, (uint8_t *)&icmp, sizeof(InternetControlMessageProtocolMessage));
+    icmp.checksum = IPProvider::checksum((u16 *)&icmp, sizeof(ICMPMessage));
+    IPHandler::send(ip_be, (u8 *)&icmp, sizeof(ICMPMessage));
 }

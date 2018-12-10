@@ -1,58 +1,57 @@
-#ifndef __MYOS__NETWORK__ETHERFRAME_H
-#define __MYOS__NETWORK__ETHERFRAME_H
+#ifndef __ETHERFRAME_HPP__
+#define __ETHERFRAME_HPP__
 
+#include <drivers/AMD/am79c973.hh>
 #include <shared/types.hh>
-#include <drivers/amd_am79c973.hh>
-#include <memorymanagement.hh>
 
-namespace myos
+struct EtherFrameHeader
 {
-    namespace network
-    {
-        struct EtherFrameHeader
-        {
-            shared::uint64_t dstMAC_BE : 48;
-            shared::uint64_t srcMAC_BE : 48;
-            shared::uint16_t etherType_BE;
-        } __attribute__((packed));
+    u64 dst_mac_be : 48;
+    u64 src_mac_be : 48;
+    u16 ether_type_be;
+} __attribute__((packed));
 
-        typedef shared::uint32_t EtherFrameFooter;
+typedef u32 EtherFrameFooter;
 
-        class EtherFrameProvider;
+class EtherFrameProvider;
 
-        class EtherFrameHandler
-        {
-        protected:
-            EtherFrameProvider *backend;
-            shared::uint16_t etherType_BE;
+class EtherFrameHandler
+{
+protected:
+    EtherFrameProvider *backend;
+    u16 ether_type_be;
 
-        public:
-            EtherFrameHandler(EtherFrameProvider *backend, shared::uint16_t etherType);
-            ~EtherFrameHandler();
+public:
+    EtherFrameHandler(EtherFrameProvider *backend, const u16 ether_type);
+    ~EtherFrameHandler();
 
-            virtual bool OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size);
-            void Send(shared::uint64_t dstMAC_BE, shared::uint8_t *etherframePayload, shared::uint32_t size);
-            shared::uint32_t GetIPAddress();
-        };
+public:
+    virtual const bool on_etherframe_recv(const u8 *etherframe_payload,
+                                          const u32 size) const;
+    void send(const u64 dst_mac_be, const u8 *etherframe_payload, const u32 size);
+    const u32 get_ip_address() const;
+};
 
-        class EtherFrameProvider : public myos::drivers::RawDataHandler
-        {
-            friend class EtherFrameHandler;
+class EtherFrameProvider : public RawDataHandler
+{
+    friend class EtherFrameHandler;
 
-        protected:
-            EtherFrameHandler *handlers[65535];
+protected:
+    EtherFrameHandler *handlers[65535];
 
-        public:
-            EtherFrameProvider(drivers::amd_am79c973 *backend);
-            ~EtherFrameProvider();
+public:
+    EtherFrameProvider(amd_am79c973 *backend);
+    ~EtherFrameProvider();
 
-            bool OnRawDataReceived(shared::uint8_t *buffer, shared::uint32_t size);
-            void Send(shared::uint64_t dstMAC_BE, shared::uint16_t etherType_BE, shared::uint8_t *buffer, shared::uint32_t size);
+public:
+    const bool on_rawdata_recv(const u8 *buffer, const u32 size) const;
+    void send(const u64 dst_mac_be,
+              const u16 ether_type_be,
+              const u8 *buffer,
+              const u32 size);
 
-            shared::uint64_t GetMACAddress();
-            shared::uint32_t GetIPAddress();
-        };
-    }
-}
+    const u64 get_mac_address() const;
+    const u32 get_ip_address() const;
+};
 
 #endif

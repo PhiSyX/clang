@@ -1,76 +1,72 @@
 .set IRQ_BASE, 0x20
 
 .section .text
+.extern _ZN16InterruptManager16handle_interruptEjj
 
-.extern _ZN4myos21hardwarecommunication16InterruptManager15HandleInterruptEhj
+# $ nm obj/interrupt.o
 
-
-.macro HandleException num
-.global _ZN4myos21hardwarecommunication16InterruptManager19HandleException\num\()Ev
-_ZN4myos21hardwarecommunication16InterruptManager19HandleException\num\()Ev:
-    movb $\num, (interruptnumber)
+.macro handle_interrupt_exception number
+.global _ZN16InterruptManager20handle_exception\number\()Ev
+_ZN16InterruptManager20handle_exception\number\()Ev:
+    movb $\number, (interrupt_number)
     jmp int_bottom
 .endm
 
-
-.macro HandleInterruptRequest num
-.global _ZN4myos21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev
-_ZN4myos21hardwarecommunication16InterruptManager26HandleInterruptRequest\num\()Ev:
-    movb $\num + IRQ_BASE, (interruptnumber)
+.macro handle_interrupt_request number
+.global _ZN16InterruptManager28handle_interrupt_request\number\()Ev
+_ZN16InterruptManager28handle_interrupt_request\number\()Ev:
+    movb $\number + IRQ_BASE, (interrupt_number)
     pushl $0
     jmp int_bottom
 .endm
 
+handle_interrupt_exception 0x00
+handle_interrupt_exception 0x01
+handle_interrupt_exception 0x02
+handle_interrupt_exception 0x03
+handle_interrupt_exception 0x04
+handle_interrupt_exception 0x05
+handle_interrupt_exception 0x06
+handle_interrupt_exception 0x07
+handle_interrupt_exception 0x08
+handle_interrupt_exception 0x09
+handle_interrupt_exception 0x0A
+handle_interrupt_exception 0x0B
+handle_interrupt_exception 0x0C
+handle_interrupt_exception 0x0D
+handle_interrupt_exception 0x0E
+handle_interrupt_exception 0x0F
+handle_interrupt_exception 0x10
+handle_interrupt_exception 0x11
+handle_interrupt_exception 0x12
+handle_interrupt_exception 0x13
 
-HandleException 0x00
-HandleException 0x01
-HandleException 0x02
-HandleException 0x03
-HandleException 0x04
-HandleException 0x05
-HandleException 0x06
-HandleException 0x07
-HandleException 0x08
-HandleException 0x09
-HandleException 0x0A
-HandleException 0x0B
-HandleException 0x0C
-HandleException 0x0D
-HandleException 0x0E
-HandleException 0x0F
-HandleException 0x10
-HandleException 0x11
-HandleException 0x12
-HandleException 0x13
-
-HandleInterruptRequest 0x00
-HandleInterruptRequest 0x01
-HandleInterruptRequest 0x02
-HandleInterruptRequest 0x03
-HandleInterruptRequest 0x04
-HandleInterruptRequest 0x05
-HandleInterruptRequest 0x06
-HandleInterruptRequest 0x07
-HandleInterruptRequest 0x08
-HandleInterruptRequest 0x09
-HandleInterruptRequest 0x0A
-HandleInterruptRequest 0x0B
-HandleInterruptRequest 0x0C
-HandleInterruptRequest 0x0D
-HandleInterruptRequest 0x0E
-HandleInterruptRequest 0x0F
-HandleInterruptRequest 0x31
-HandleInterruptRequest 0x80
+handle_interrupt_request 0x00
+handle_interrupt_request 0x01
+handle_interrupt_request 0x02
+handle_interrupt_request 0x03
+handle_interrupt_request 0x04
+handle_interrupt_request 0x05
+handle_interrupt_request 0x06
+handle_interrupt_request 0x07
+handle_interrupt_request 0x08
+handle_interrupt_request 0x09
+handle_interrupt_request 0x0A
+handle_interrupt_request 0x0B
+handle_interrupt_request 0x0C
+handle_interrupt_request 0x0D
+handle_interrupt_request 0x0E
+handle_interrupt_request 0x0F
+handle_interrupt_request 0x31
+handle_interrupt_request 0x80
 
 int_bottom:
+    # pusha
+    # pushl %ds
+    # pushl %es
+    # pushl %fs
+    # pushl %gs
 
-    # save registers
-    #pusha
-    #pushl %ds
-    #pushl %es
-    #pushl %fs
-    #pushl %gs
-    
     pushl %ebp
     pushl %edi
     pushl %esi
@@ -80,20 +76,13 @@ int_bottom:
     pushl %ebx
     pushl %eax
 
-    # load ring 0 segment register
-    #cld
-    #mov $0x10, %eax
-    #mov %eax, %eds
-    #mov %eax, %ees
 
-    # call C++ Handler
     pushl %esp
-    push (interruptnumber)
-    call _ZN4myos21hardwarecommunication16InterruptManager15HandleInterruptEhj
-    #add %esp, 6
-    mov %eax, %esp # switch the stack
+    push (interrupt_number)
+    call _ZN16InterruptManager16handle_interruptEhj
+    # add %esp, 6
+    mov %eax, %esp
 
-    # restore registers
     popl %eax
     popl %ebx
     popl %ecx
@@ -102,19 +91,19 @@ int_bottom:
     popl %esi
     popl %edi
     popl %ebp
-    #pop %gs
-    #pop %fs
-    #pop %es
-    #pop %ds
-    #popa
-    
+    # pop %gs
+    # pop %fs
+    # pop %es
+    # pop %ds
+    # popa
+
     add $4, %esp
 
-.global _ZN4myos21hardwarecommunication16InterruptManager15InterruptIgnoreEv
-_ZN4myos21hardwarecommunication16InterruptManager15InterruptIgnoreEv:
+.global _ZN16InterruptManager16interrupt_ignoreEv
+_ZN16InterruptManager16interrupt_ignoreEv:
 
     iret
 
-
 .data
-    interruptnumber: .byte 0
+    interrupt_number: .byte 0
+

@@ -1,41 +1,41 @@
-#include <drivers/driver.hh>
+#include "drivers/driver.hh"
 
-using namespace myos::drivers;
+Driver::Driver() {}
 
-Driver::Driver()
+Driver::~Driver() {}
+
+void Driver::activate() const
 {
 }
 
-Driver::~Driver()
-{
-}
-
-void Driver::Activate()
-{
-}
-
-int Driver::Reset()
+const int
+Driver::reset() const
 {
     return 0;
 }
 
-void Driver::Deactivate()
+void Driver::deactivate() const
 {
 }
 
 DriverManager::DriverManager()
 {
-    numDrivers = 0;
+    total_drivers = 0;
 }
 
-void DriverManager::AddDriver(Driver *drv)
+const void
+DriverManager::add(const Driver *driver) const
 {
-    drivers[numDrivers] = drv;
-    numDrivers++;
+    drivers[total_drivers] = driver;
+    total_drivers++;
 }
 
-void DriverManager::ActivateAll()
+const void
+DriverManager::enable_all() const
 {
-    for (int i = 0; i < numDrivers; i++)
-        drivers[i]->Activate();
+    for (usize i = 0; i < total_drivers; i++)
+    {
+        const auto driver = drivers[i];
+        driver->activate();
+    }
 }

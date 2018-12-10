@@ -1,42 +1,45 @@
-#ifndef __MYOS__GDT_H
-#define __MYOS__GDT_H
+#ifndef __GDT_HPP__
+#define __GDT_HPP__
 
 #include <shared/types.hh>
 
-namespace myos
+class GlobalDescriptorTable
 {
-    class GlobalDescriptorTable
+public:
+    class SegmentDescriptor
     {
-    public:
-        class SegmentDescriptor
-        {
-        private:
-            myos::shared::uint16_t limit_lo;
-            myos::shared::uint16_t base_lo;
-            myos::shared::uint8_t base_hi;
-            myos::shared::uint8_t type;
-            myos::shared::uint8_t limit_hi;
-            myos::shared::uint8_t base_vhi;
-
-        public:
-            SegmentDescriptor(myos::shared::uint32_t base, myos::shared::uint32_t limit, myos::shared::uint8_t type);
-            myos::shared::uint32_t Base();
-            myos::shared::uint32_t Limit();
-        } __attribute__((packed));
-
     private:
-        SegmentDescriptor nullSegmentSelector;
-        SegmentDescriptor unusedSegmentSelector;
-        SegmentDescriptor codeSegmentSelector;
-        SegmentDescriptor dataSegmentSelector;
+        /// `_lo` signifie les bits les moins significatifs.
+        u16 limit_lo;
+        u16 base_lo;
+
+        /// `_hi` signifie les bits les plus significatifs.
+        u8 base_hi;
+        u8 type;
+        u8 flags_limit_hi;
+        u8 base_vhi;
 
     public:
-        GlobalDescriptorTable();
-        ~GlobalDescriptorTable();
+        SegmentDescriptor(const u32 base, u32 limit, const u8 type);
 
-        myos::shared::uint16_t CodeSegmentSelector();
-        myos::shared::uint16_t DataSegmentSelector();
-    };
-}
+        const u32 base() const;
+        const u32 limit() const;
+    } __attribute__((packed)); // L'attribut 'packed' indique à GCC de ne pas
+                               // modifier l'alignement de la structure et de ne
+                               // pas effectuer d'optimisations.
+
+    SegmentDescriptor null_segment_selector;
+    SegmentDescriptor unused_segment_selector;
+    SegmentDescriptor code_segment_selector;
+    SegmentDescriptor data_segment_selector;
+
+public:
+    GlobalDescriptorTable();
+    ~GlobalDescriptorTable();
+
+public:
+    const u16 get_code_segment_selector() const;
+    const u16 get_data_segment_selector() const;
+};
 
 #endif

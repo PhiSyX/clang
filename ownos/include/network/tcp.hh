@@ -1,130 +1,134 @@
-#ifndef __MYOS__NETWORK__TCP_H
-#define __MYOS__NETWORK__TCP_H
+#ifndef __TCP_HPP__
+#define __TCP_HPP__
 
-#include <shared/types.hh>
 #include <network/ipv4.hh>
-#include <memorymanagement.hh>
+#include <shared/types.hh>
 
-namespace myos
+// Transmission Control Protocol
+
+enum TCPSocketState
 {
-    namespace network
-    {
-        enum TransmissionControlProtocolSocketState
-        {
-            CLOSED,
-            LISTEN,
-            SYN_SENT,
-            SYN_RECEIVED,
+    CLOSED,
+    LISTEN,
+    SYN_SENT,
+    SYN_RECEIVED,
 
-            ESTABLISHED,
+    ESTABLISHED,
 
-            FIN_WAIT1,
-            FIN_WAIT2,
-            CLOSING,
-            TIME_WAIT,
+    FIN_WAIT1,
+    FIN_WAIT2,
+    CLOSING,
+    TIME_WAIT,
 
-            CLOSE_WAIT
-            // LAST_ACK
-        };
+    CLOSE_WAIT,
+    //   LAST_ACK,
+};
 
-        enum TransmissionControlProtocolFlag
-        {
-            FIN = 1,
-            SYN = 2,
-            RST = 4,
-            PSH = 8,
-            ACK = 16,
-            URG = 32,
-            ECE = 64,
-            CWR = 128,
-            NS = 256
-        };
+enum TCPFlag
+{
+    FIN = 1,
+    SYN = 2,
+    RST = 4,
+    PSH = 8,
+    ACK = 16,
+    URG = 32,
+    ECE = 64,
+    CWR = 128,
+    NS = 256
+};
 
-        struct TransmissionControlProtocolHeader
-        {
-            shared::uint16_t srcPort;
-            shared::uint16_t dstPort;
-            shared::uint32_t sequenceNumber;
-            shared::uint32_t acknowledgementNumber;
+struct TCPHeader
+{
+    u16 src_port;
+    u16 dst_port;
+    u32 sequence_number;
+    u32 acknowledgement_number;
 
-            shared::uint8_t reserved : 4;
-            shared::uint8_t headerSize32 : 4;
-            shared::uint8_t flags;
+    u8 reserved : 4;
+    u8 header_size_32 : 4;
+    u16 flags;
 
-            shared::uint16_t windowSize;
-            shared::uint16_t checksum;
-            shared::uint16_t urgentPtr;
+    u16 window_size;
+    u16 checksum;
+    u16 urgent_ptr;
 
-            shared::uint32_t options;
-        } __attribute__((packed));
+    u32 options;
+} __attribute__((packed));
 
-        struct TransmissionControlProtocolPseudoHeader
-        {
-            shared::uint32_t srcIP;
-            shared::uint32_t dstIP;
-            shared::uint16_t protocol;
-            shared::uint16_t totalLength;
-        } __attribute__((packed));
+struct TCPPseudoHeader
+{
+    u32 src_ip;
+    u32 dst_ip;
+    u16 protocol;
+    u16 total_length;
+} __attribute__((packed));
 
-        class TransmissionControlProtocolSocket;
-        class TransmissionControlProtocolProvider;
+class TCPSocket;
+class TCPProvider;
 
-        class TransmissionControlProtocolHandler
-        {
-        public:
-            TransmissionControlProtocolHandler();
-            ~TransmissionControlProtocolHandler();
-            virtual bool HandleTransmissionControlProtocolMessage(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size);
-        };
+class TCPHandler
+{
+public:
+    TCPHandler();
+    ~TCPHandler();
 
-        class TransmissionControlProtocolSocket
-        {
-            friend class TransmissionControlProtocolProvider;
+public:
+    virtual const bool handle_tcp_message(const TCPSocket *socket,
+                                          const u8 *data,
+                                          const u16 size) const;
+};
 
-        protected:
-            shared::uint16_t remotePort;
-            shared::uint32_t remoteIP;
-            shared::uint16_t localPort;
-            shared::uint32_t localIP;
-            shared::uint32_t sequenceNumber;
-            shared::uint32_t acknowledgementNumber;
+class TCPSocket
+{
+    friend class TCPProvider;
 
-            TransmissionControlProtocolProvider *backend;
-            TransmissionControlProtocolHandler *handler;
+protected:
+    u16 remote_port;
+    u32 remote_ip;
+    u16 local_port;
+    u32 local_ip;
+    u32 acknowledgement_number;
+    u32 sequence_number;
+    TCPProvider *backend;
+    TCPHandler *handler;
+    TCPSocketState state;
 
-            TransmissionControlProtocolSocketState state;
+public:
+    TCPSocket(TCPProvider *backend);
+    ~TCPSocket();
 
-        public:
-            TransmissionControlProtocolSocket(TransmissionControlProtocolProvider *backend);
-            ~TransmissionControlProtocolSocket();
-            virtual bool HandleTransmissionControlProtocolMessage(shared::uint8_t *data, shared::uint16_t size);
-            virtual void Send(shared::uint8_t *data, shared::uint16_t size);
-            virtual void Disconnect();
-        };
+public:
+    virtual const bool handle_tcp_message(const u8 *data, const u16 size) const;
+    virtual void send(const u8 *data, const u16 size);
+    virtual void disconnect();
+};
 
-        class TransmissionControlProtocolProvider : InternetProtocolHandler
-        {
-        protected:
-            TransmissionControlProtocolSocket *sockets[65535];
-            shared::uint16_t numSockets;
-            shared::uint16_t freePort;
+class TCPProvider : IPHandler
+{
+protected:
+    TCPSocket *sockets[65535];
+    u16 total_sockets;
+    u16 free_port;
 
-        public:
-            TransmissionControlProtocolProvider(InternetProtocolProvider *backend);
-            ~TransmissionControlProtocolProvider();
+public:
+    TCPProvider(IPProvider *backend);
+    ~TCPProvider();
 
-            virtual bool OnInternetProtocolReceived(shared::uint32_t srcIP_BE, shared::uint32_t dstIP_BE,
-                                                    shared::uint8_t *internetprotocolPayload, shared::uint32_t size);
+public:
+    virtual bool on_ip_recv(const u32 src_ip_be,
+                            const u32 dst_ip_be,
+                            const u8 *ip_payload,
+                            const u32 size);
 
-            virtual TransmissionControlProtocolSocket *Connect(shared::uint32_t ip, shared::uint16_t port);
-            virtual void Disconnect(TransmissionControlProtocolSocket *socket);
-            virtual void Send(TransmissionControlProtocolSocket *socket, shared::uint8_t *data, shared::uint16_t size,
-                              shared::uint16_t flags = 0);
+    virtual TCPSocket *connect(const u32 ip, const u16 port);
+    virtual void disconnect(TCPSocket *socket);
+    virtual void send(TCPSocket *socket,
+                      const u8 *data,
+                      const u16 size,
+                      const u16 flags = 0);
 
-            virtual TransmissionControlProtocolSocket *Listen(shared::uint16_t port);
-            virtual void Bind(TransmissionControlProtocolSocket *socket, TransmissionControlProtocolHandler *handler);
-        };
-    }
-}
+    virtual TCPSocket *listen(const u16 port);
+    virtual void bind(TCPSocket *socket, TCPHandler *handler);
+};
 
 #endif

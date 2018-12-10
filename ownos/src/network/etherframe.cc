@@ -1,98 +1,114 @@
-#include <network/etherframe.hh>
+#include "network/etherframe.hh"
+#include "memory.hh"
 
-using namespace myos;
-using namespace myos::shared;
-using namespace myos::network;
-using namespace myos::drivers;
-
-EtherFrameHandler::EtherFrameHandler(EtherFrameProvider *backend, uint16_t etherType)
+EtherFrameHandler::EtherFrameHandler(EtherFrameProvider *$backend,
+                                     const u16 ether_type)
 {
-    this->etherType_BE = ((etherType & 0x00FF) << 8) | ((etherType & 0xFF00) >> 8);
-    this->backend = backend;
-    backend->handlers[etherType_BE] = this;
+    ether_type_be = ((ether_type & 0x00FF) << 8) | ((ether_type & 0xFF00) >> 8);
+    backend = $backend;
+    $backend->handlers[ether_type_be] = this;
 }
 
 EtherFrameHandler::~EtherFrameHandler()
 {
-    if (backend->handlers[etherType_BE] == this)
-        backend->handlers[etherType_BE] = 0;
+    if (backend->handlers[ether_type_be] == this)
+    {
+        backend->handlers[ether_type_be] = 0;
+    }
 }
 
-bool EtherFrameHandler::OnEtherFrameReceived(shared::uint8_t *etherframePayload, shared::uint32_t size)
+const bool
+EtherFrameHandler::on_etherframe_recv(const u8 *etherframe_payload,
+                                      const u32 size) const
 {
     return false;
 }
 
-void EtherFrameHandler::Send(shared::uint64_t dstMAC_BE, shared::uint8_t *data, shared::uint32_t size)
+void EtherFrameHandler::send(const u64 dst_mac_be, const u8 *data, const u32 size)
 {
-    backend->Send(dstMAC_BE, etherType_BE, data, size);
+    backend->send(dst_mac_be, ether_type_be, data, size);
 }
 
 EtherFrameProvider::EtherFrameProvider(amd_am79c973 *backend)
     : RawDataHandler(backend)
 {
-    for (uint32_t i = 0; i < 65535; i++)
+    for (u32 i = 0; i < 65535; i++)
+    {
         handlers[i] = 0;
+    }
 }
 
-EtherFrameProvider::~EtherFrameProvider()
-{
-}
+EtherFrameProvider::~EtherFrameProvider() {}
 
-bool EtherFrameProvider::OnRawDataReceived(shared::uint8_t *buffer, shared::uint32_t size)
+const bool
+EtherFrameProvider::on_rawdata_recv(const u8 *buffer, const u32 size) const
 {
     if (size < sizeof(EtherFrameHeader))
+    {
         return false;
+    }
 
     EtherFrameHeader *frame = (EtherFrameHeader *)buffer;
-    bool sendBack = false;
+    bool send_back = false;
 
-    if (frame->dstMAC_BE == 0xFFFFFFFFFFFF || frame->dstMAC_BE == backend->GetMACAddress())
+    if (frame->dst_mac_be == 0xFFFFFFFFFFFF ||
+        frame->dst_mac_be == backend->get_mac_address())
     {
-        if (handlers[frame->etherType_BE] != 0)
-            sendBack = handlers[frame->etherType_BE]->OnEtherFrameReceived(
+        if (handlers[frame->ether_type_be] != 0)
+        {
+            send_back = handlers[frame->ether_type_be]->on_etherframe_recv(
                 buffer + sizeof(EtherFrameHeader), size - sizeof(EtherFrameHeader));
+        }
     }
 
-    if (sendBack)
+    if (send_back)
     {
-        frame->dstMAC_BE = frame->srcMAC_BE;
-        frame->srcMAC_BE = backend->GetMACAddress();
+        frame->dst_mac_be = frame->src_mac_be;
+        frame->src_mac_be = backend->get_mac_address();
     }
 
-    return sendBack;
+    return send_back;
 }
 
-void EtherFrameProvider::Send(shared::uint64_t dstMAC_BE, shared::uint16_t etherType_BE, shared::uint8_t *buffer, shared::uint32_t size)
+void EtherFrameProvider::send(const u64 dst_mac_be,
+                              const u16 ether_type_be,
+                              const u8 *buffer,
+                              const u32 size)
 {
-    uint8_t *buffer2 = (uint8_t *)MemoryManager::activeMemoryManager->malloc(sizeof(EtherFrameHeader) + size);
+    u8 *buffer2 = (u8 *)MemoryManager::active_memory_manager->malloc(
+        sizeof(EtherFrameHeader) + size);
     EtherFrameHeader *frame = (EtherFrameHeader *)buffer2;
 
-    frame->dstMAC_BE = dstMAC_BE;
-    frame->srcMAC_BE = backend->GetMACAddress();
-    frame->etherType_BE = etherType_BE;
+    frame->dst_mac_be = dst_mac_be;
+    frame->src_mac_be = backend->get_mac_address();
+    frame->ether_type_be = ether_type_be;
 
-    uint8_t *src = buffer;
-    uint8_t *dst = buffer2 + sizeof(EtherFrameHeader);
-    for (uint32_t i = 0; i < size; i++)
+    const u8 *src = buffer;
+    u8 *dst = buffer2 + sizeof(EtherFrameHeader);
+    for (u32 i = 0; i < size; i++)
+    {
         dst[i] = src[i];
+    }
 
-    backend->Send(buffer2, size + sizeof(EtherFrameHeader));
+    backend->send(buffer2, size + sizeof(EtherFrameHeader));
 
-    MemoryManager::activeMemoryManager->free(buffer2);
+    MemoryManager::active_memory_manager->free(buffer2);
 }
 
-uint32_t EtherFrameProvider::GetIPAddress()
+const u32
+EtherFrameProvider::get_ip_address() const
 {
-    return backend->GetIPAddress();
+    return backend->get_ip_address();
 }
 
-uint64_t EtherFrameProvider::GetMACAddress()
+const u64
+EtherFrameProvider::get_mac_address() const
 {
-    return backend->GetMACAddress();
+    return backend->get_mac_address();
 }
 
-uint32_t EtherFrameHandler::GetIPAddress()
+const u32
+EtherFrameHandler::get_ip_address() const
 {
-    return backend->GetIPAddress();
+    return backend->get_ip_address();
 }

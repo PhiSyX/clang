@@ -1,118 +1,126 @@
-#ifndef __MYOS__COM__INTERRUPTMANAGER_H
-#define __MYOS__COM__INTERRUPTMANAGER_H
+#ifndef __INTERRUPTS_HPP__
+#define __INTERRUPTS_HPP__
 
 #include <gdt.hh>
+#include <COM/port.hh>
 #include <multitasking.hh>
 #include <shared/types.hh>
-#include <COM/port.hh>
 
-namespace myos
+void printf(char *str);
+
+void printh(u8 key);
+
+class InterruptManager;
+
+class InterruptHandler
 {
-    namespace COM
-    {
-        class InterruptManager;
+protected:
+  u8 interrupt_number;
+  InterruptManager *interrupt_manager;
 
-        class InterruptHandler
-        {
-        protected:
-            myos::shared::uint8_t InterruptNumber;
-            InterruptManager *interruptManager;
-            InterruptHandler(InterruptManager *interruptManager, myos::shared::uint8_t InterruptNumber);
-            ~InterruptHandler();
+  InterruptHandler(InterruptManager *interrupt_manager,
+                   const u8 interrupt_number);
+  ~InterruptHandler();
 
-        public:
-            virtual myos::shared::uint32_t HandleInterrupt(myos::shared::uint32_t esp);
-        };
+public:
+  virtual const u32 handle_interrupt(const u32 esp);
+};
 
-        class InterruptManager
-        {
-            friend class InterruptHandler;
+class InterruptManager
+{
+  friend class InterruptHandler;
 
-        protected:
-            static InterruptManager *ActiveInterruptManager;
-            InterruptHandler *handlers[256];
-            TaskManager *taskManager;
+protected:
+  static InterruptManager *active_interrupt_manager;
+  InterruptHandler *handlers[256];
+  TaskManager *task_manager;
 
-            struct GateDescriptor
-            {
-                myos::shared::uint16_t handlerAddressLowBits;
-                myos::shared::uint16_t gdt_codeSegmentSelector;
-                myos::shared::uint8_t reserved;
-                myos::shared::uint8_t access;
-                myos::shared::uint16_t handlerAddressHighBits;
-            } __attribute__((packed));
+  struct GateDescriptor
+  {
+    u16 handler_address_low_bits;
+    u16 gdt_code_segment_selector;
+    u8 reserved;
+    u8 access;
+    u16 handler_address_high_bits;
+  } __attribute__((packed));
 
-            static GateDescriptor interruptDescriptorTable[256];
+  static GateDescriptor idt[256];
 
-            struct InterruptDescriptorTablePointer
-            {
-                myos::shared::uint16_t size;
-                myos::shared::uint32_t base;
-            } __attribute__((packed));
+  struct InterruptDescriptorTablePtr
+  {
+    u16 size;
+    u32 base;
+  } __attribute__((packed));
 
-            myos::shared::uint16_t hardwareInterruptOffset;
-            static void SetInterruptDescriptorTableEntry(myos::shared::uint8_t interrupt,
-                                                         myos::shared::uint16_t codeSegmentSelectorOffset, void (*handler)(),
-                                                         myos::shared::uint8_t DescriptorPrivilegeLevel, myos::shared::uint8_t DescriptorType);
+  static void set_interrupt_descriptor_table_entry(
+      u8 interrupt_number,
+      u16 code_segment_selector_offset,
+      void (*handler)(),
+      u8 descriptor_privilege_level,
+      u8 descriptor_type);
 
-            static void InterruptIgnore();
+  static void interrupt_ignore();
 
-            static void HandleInterruptRequest0x00();
-            static void HandleInterruptRequest0x01();
-            static void HandleInterruptRequest0x02();
-            static void HandleInterruptRequest0x03();
-            static void HandleInterruptRequest0x04();
-            static void HandleInterruptRequest0x05();
-            static void HandleInterruptRequest0x06();
-            static void HandleInterruptRequest0x07();
-            static void HandleInterruptRequest0x08();
-            static void HandleInterruptRequest0x09();
-            static void HandleInterruptRequest0x0A();
-            static void HandleInterruptRequest0x0B();
-            static void HandleInterruptRequest0x0C();
-            static void HandleInterruptRequest0x0D();
-            static void HandleInterruptRequest0x0E();
-            static void HandleInterruptRequest0x0F();
-            static void HandleInterruptRequest0x31();
-            static void HandleInterruptRequest0x80();
+  static void handle_interrupt_request0x00();
+  static void handle_interrupt_request0x01();
+  static void handle_interrupt_request0x02();
+  static void handle_interrupt_request0x03();
+  static void handle_interrupt_request0x04();
+  static void handle_interrupt_request0x05();
+  static void handle_interrupt_request0x06();
+  static void handle_interrupt_request0x07();
+  static void handle_interrupt_request0x08();
+  static void handle_interrupt_request0x09();
+  static void handle_interrupt_request0x0A();
+  static void handle_interrupt_request0x0B();
+  static void handle_interrupt_request0x0C();
+  static void handle_interrupt_request0x0D();
+  static void handle_interrupt_request0x0E();
+  static void handle_interrupt_request0x0F();
+  static void handle_interrupt_request0x31();
+  static void handle_interrupt_request0x80();
 
-            static void HandleException0x00();
-            static void HandleException0x01();
-            static void HandleException0x02();
-            static void HandleException0x03();
-            static void HandleException0x04();
-            static void HandleException0x05();
-            static void HandleException0x06();
-            static void HandleException0x07();
-            static void HandleException0x08();
-            static void HandleException0x09();
-            static void HandleException0x0A();
-            static void HandleException0x0B();
-            static void HandleException0x0C();
-            static void HandleException0x0D();
-            static void HandleException0x0E();
-            static void HandleException0x0F();
-            static void HandleException0x10();
-            static void HandleException0x11();
-            static void HandleException0x12();
-            static void HandleException0x13();
+  static void handle_exception0x00();
+  static void handle_exception0x01();
+  static void handle_exception0x02();
+  static void handle_exception0x03();
+  static void handle_exception0x04();
+  static void handle_exception0x05();
+  static void handle_exception0x06();
+  static void handle_exception0x07();
+  static void handle_exception0x08();
+  static void handle_exception0x09();
+  static void handle_exception0x0A();
+  static void handle_exception0x0B();
+  static void handle_exception0x0C();
+  static void handle_exception0x0D();
+  static void handle_exception0x0E();
+  static void handle_exception0x0F();
+  static void handle_exception0x10();
+  static void handle_exception0x11();
+  static void handle_exception0x12();
+  static void handle_exception0x13();
 
-            static myos::shared::uint32_t HandleInterrupt(myos::shared::uint8_t interrupt, myos::shared::uint32_t esp);
-            myos::shared::uint32_t DoHandleInterrupt(myos::shared::uint8_t interrupt, myos::shared::uint32_t esp);
+  static u32 handle_interrupt(u8 interrupt_number, u32 esp);
+  u32 do_handle_interrupt(u8 interrupt_number, u32 esp);
 
-            Port8BitSlow programmableInterruptControllerMasterCommandPort;
-            Port8BitSlow programmableInterruptControllerMasterDataPort;
-            Port8BitSlow programmableInterruptControllerSlaveCommandPort;
-            Port8BitSlow programmableInterruptControllerSlaveDataPort;
+  Port8BitSlow pic_master_command_port;
+  Port8BitSlow pic_master_data_port;
+  Port8BitSlow pic_slave_command_port;
+  Port8BitSlow pic_slave_data_port;
 
-        public:
-            InterruptManager(myos::shared::uint16_t hardwareInterruptOffset, myos::GlobalDescriptorTable *globalDescriptorTable, myos::TaskManager *taskManager);
-            ~InterruptManager();
-            myos::shared::uint16_t HardwareInterruptOffset();
-            void Activate();
-            void Deactivate();
-        };
-    }
-}
+public:
+  u16 hardware_interrupt_offset;
+
+public:
+  InterruptManager(u16 hw_interrupt_offset,
+                   GlobalDescriptorTable *gdt,
+                   TaskManager *task_manager);
+  ~InterruptManager();
+
+public:
+  void activate();
+  void deactivate();
+};
 
 #endif

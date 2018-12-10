@@ -1,35 +1,33 @@
+#ifndef __DRIVER_HPP__
+#define __DRIVER_HPP__
 
-#ifndef __MYOS__DRIVERS__DRIVER_H
-#define __MYOS__DRIVERS__DRIVER_H
+#include <shared/types.hh>
 
-namespace myos
+class Driver
 {
-    namespace drivers
-    {
-        class Driver
-        {
-        public:
-            Driver();
-            ~Driver();
+public:
+  Driver();
+  ~Driver();
 
-            virtual void Activate();
-            virtual int Reset();
-            virtual void Deactivate();
-        };
+public:
+  virtual void activate() const;
+  virtual const i32 reset() const;
+  virtual void deactivate() const;
+};
 
-        class DriverManager
-        {
-        public:
-            Driver *drivers[265];
-            int numDrivers;
+class DriverManager
+{
+public:
+  mutable const Driver *drivers[265];
+  mutable usize total_drivers;
 
-        public:
-            DriverManager();
-            void AddDriver(Driver *);
+public:
+  DriverManager();
 
-            void ActivateAll();
-        };
-    }
-}
+public:
+  const void add(const Driver *) const;
+
+  const void enable_all() const;
+};
 
 #endif

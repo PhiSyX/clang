@@ -1,46 +1,56 @@
-#ifndef __MYOS__DRIVERS__VGA_H
-#define __MYOS__DRIVERS__VGA_H
+#ifndef __VGA_HPP__
+#define __VGA_HPP__
 
-#include <shared/types.hh>
-#include <COM/port.hh>
 #include <drivers/driver.hh>
+#include <COM/port.hh>
+#include <shared/types.hh>
 
-namespace myos
+// Video Graphics Array
+class VGA
 {
-    namespace drivers
-    {
-        class VideoGraphicsArray
-        {
-        protected:
-            COM::Port8Bit miscPort;
-            COM::Port8Bit crtcIndexPort;
-            COM::Port8Bit crtcDataPort;
-            COM::Port8Bit sequencerIndexPort;
-            COM::Port8Bit sequencerDataPort;
-            COM::Port8Bit graphicsControllerIndexPort;
-            COM::Port8Bit graphicsControllerDataPort;
-            COM::Port8Bit attributeControllerIndexPort;
-            COM::Port8Bit attributeControllerReadPort;
-            COM::Port8Bit attributeControllerWritePort;
-            COM::Port8Bit attributeControllerResetPort;
+protected:
+  Port8Bit misc_port;
+  Port8Bit crtc_index_port;
+  Port8Bit crtc_data_port;
+  Port8Bit sequencer_index_port;
+  Port8Bit sequencer_data_port;
+  Port8Bit graphics_controller_index_port;
+  Port8Bit graphics_controller_data_port;
+  Port8Bit attribute_controller_index_port;
+  Port8Bit attribute_controller_read_port;
+  Port8Bit attribute_controller_write_port;
+  Port8Bit attribute_controller_reset_port;
 
-            void WriteRegisters(shared::uint8_t *registers);
-            shared::uint8_t *GetFrameBufferSegment();
+  u8* get_frame_buffer_segment();
+  virtual const u8 get_color_index(const u8 r, const u8 g, const u8 b) const;
+  void write_registers(u8* registers);
 
-            virtual shared::uint8_t GetColorIndex(shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
+public:
+  VGA();
+  ~VGA();
 
-        public:
-            VideoGraphicsArray();
-            ~VideoGraphicsArray();
-
-            virtual bool SupportsMode(shared::uint32_t width, shared::uint32_t height, shared::uint32_t colordepth);
-            virtual bool SetMode(shared::uint32_t width, shared::uint32_t height, shared::uint32_t colordepth);
-            virtual void PutPixel(shared::int32_t x, shared::int32_t y, shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
-            virtual void PutPixel(shared::int32_t x, shared::int32_t y, shared::uint8_t colorIndex);
-
-            virtual void FillRectangle(shared::uint32_t x, shared::uint32_t y, shared::uint32_t w, shared::uint32_t h, shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
-        };
-    }
-}
+public:
+  virtual const bool supports_mode(const u32 width,
+                                   const u32 height,
+                                   const u32 colordepth) const;
+  virtual /* contains static */ bool set_mode(const u32 width,
+                                              const u32 height,
+                                              const u32 colordepth);
+  virtual /* contains static */ void put_pixel(const i32 x,
+                                               const i32 y,
+                                               const u8 r,
+                                               const u8 g,
+                                               const u8 b);
+  virtual /* contains static */ void put_pixel(const i32 x,
+                                               const i32 y,
+                                               const u8 color_index);
+  virtual /* contains static */ void fill_rect(const u32 x,
+                                               const u32 y,
+                                               const u32 width,
+                                               const u32 height,
+                                               const u8 r,
+                                               const u8 g,
+                                               const u8 b);
+};
 
 #endif

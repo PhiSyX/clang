@@ -1,29 +1,32 @@
-#ifndef __MYOS__GUI__WINDOW_H
-#define __MYOS__GUI__WINDOW_H
+#ifndef __WINDOW_HPP__
+#define __WINDOW_HPP__
 
 #include <GUI/widget.hh>
-#include <drivers/mouse.hh>
+#include <shared/types.hh>
 
-namespace myos
+class Window : public CompositeWidget
 {
-    namespace GUI
-    {
-        class Window : public CompositeWidget
-        {
-        protected:
-            bool Dragging;
+protected:
+  bool dragging;
 
-        public:
-            Window(Widget *parent,
-                   shared::int32_t x, shared::int32_t y, shared::int32_t w, shared::int32_t h,
-                   shared::uint8_t r, shared::uint8_t g, shared::uint8_t b);
-            ~Window();
+public:
+  Window(const Widget *parent,
+         const i32 x,
+         const i32 y,
+         const i32 w,
+         const i32 h,
+         const u8 r,
+         const u8 g,
+         const u8 b);
+  ~Window();
 
-            void OnMouseDown(shared::int32_t x, shared::int32_t y, shared::uint8_t button);
-            void OnMouseUp(shared::int32_t x, shared::int32_t y, shared::uint8_t button);
-            void OnMouseMove(shared::int32_t oldx, shared::int32_t oldy, shared::int32_t newx, shared::int32_t newy);
-        };
-    }
-}
+public:
+  void on_mousedown(const i32 x, const i32 y, const u8 button);
+  void on_mouseup(const i32 x, const i32 y, const u8 button);
+  void on_mousemove(const i32 old_x,
+                    const i32 old_y,
+                    const i32 new_x,
+                    const i32 new_y);
+};
 
 #endif
