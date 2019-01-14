@@ -1,10 +1,14 @@
-#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "connection.h"
 #include "metacmd.h"
 #include "prepare.h"
 #include "statement.h"
 #include "stringbuffer.h"
+#include "table.h"
+
+#include <stdbool.h>
 
 char*
 get_database_filename(int argc, char* argv[])
@@ -30,6 +34,8 @@ main(int argc, char* argv[])
 	char* database_filename = get_database_filename(argc, argv);
 
 	Connection* connection = open_connection(database_filename);
+
+	Table* table = new_table();
 	StringBuffer* input = default_buffer();
 
 	while (true)
@@ -60,9 +66,22 @@ main(int argc, char* argv[])
 			case ERR_INVALID_STATEMENT:
 				printf("Instruction '%s' non reconnue.\n", input->buffer);
 				continue;
+
+			case ERR_SYNTAX_ERROR:
+				printf(
+				  "Erreur de syntaxe. Impossible d'analyser l'instruction.\n");
+				continue;
 		}
 
-		execute_statement(&statement);
-		printf("Exécutée.\n");
+		switch (execute_statement(&statement, table))
+		{
+			case OK_EXECUTE:
+				printf("Exécutée.\n");
+				break;
+
+			case ERR_TABLE_FULL:
+				printf("Erreur: table pleine.\n");
+				break;
+		}
 	}
 }

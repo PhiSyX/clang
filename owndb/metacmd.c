@@ -1,7 +1,7 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "metacmd.h"
-#include "stringbuffer.h"
 
 MetaCommand
 do_meta_command(StringBuffer* input_buffer)
